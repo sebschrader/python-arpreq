@@ -19,8 +19,10 @@ struct arpreq_state {
 };
 
 #if PY_MAJOR_VERSION >= 3
+#define PyStringType_FromFormat PyUnicode_FromFormat
 #define GETSTATE(m) ((struct arpreq_state*)PyModule_GetState(m))
 #else
+#define PyStringType_FromFormat PyString_FromFormat
 #define GETSTATE(m) (&_state)
 static struct arpreq_state _state;
 #endif
@@ -92,10 +94,9 @@ arpreq(PyObject * self, PyObject * args) {
 
     if (arpreq.arp_flags & ATF_COM) {
         unsigned char *eap = (unsigned char *) &arpreq.arp_ha.sa_data[0];
-        char mac[18];
-        snprintf(mac, sizeof(mac), "%02x:%02x:%02x:%02x:%02x:%02x",
-                 eap[0], eap[1], eap[2], eap[3], eap[4], eap[5]);
-        return Py_BuildValue("s", mac);
+        return PyStringType_FromFormat("%02x:%02x:%02x:%02x:%02x:%02x",
+                                       eap[0], eap[1], eap[2],
+                                       eap[3], eap[4], eap[5]);
     } else {
         Py_INCREF(Py_None);
         return Py_None;

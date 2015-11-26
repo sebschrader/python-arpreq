@@ -64,7 +64,7 @@ arpreq(PyObject * self, PyObject * args) {
     int addr = sin->sin_addr.s_addr;
 
     struct ifaddrs * head_ifa;
-    if (getifaddrs(&head_ifa) != 0) {
+    if (getifaddrs(&head_ifa) == -1) {
         return PyErr_SetFromErrno(PyExc_OSError);
     }
 
@@ -88,7 +88,7 @@ arpreq(PyObject * self, PyObject * args) {
         return Py_None;
     }
 
-    if (ioctl(st->socket, SIOCGARP, &arpreq) < 0) {
+    if (ioctl(st->socket, SIOCGARP, &arpreq) == -1) {
         return PyErr_SetFromErrno(PyExc_OSError);
     }
 

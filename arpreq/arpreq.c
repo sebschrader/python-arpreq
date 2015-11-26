@@ -157,5 +157,3 @@ initarpreq(void)
     return module;
 #endif
 }
-
-

@@ -89,7 +89,12 @@ arpreq(PyObject * self, PyObject * args) {
     }
 
     if (ioctl(st->socket, SIOCGARP, &arpreq) == -1) {
-        return PyErr_SetFromErrno(PyExc_OSError);
+        if (errno == ENXIO) {
+            Py_INCREF(Py_None);
+            return Py_None;
+        } else {
+            return PyErr_SetFromErrno(PyExc_OSError);
+        }
     }
 
     if (arpreq.arp_flags & ATF_COM) {

@@ -19,10 +19,8 @@ struct arpreq_state {
 };
 
 #if PY_MAJOR_VERSION >= 3
-#define PyStringType_FromFormat PyUnicode_FromFormat
 #define GETSTATE(m) ((struct arpreq_state*)PyModule_GetState(m))
 #else
-#define PyStringType_FromFormat PyString_FromFormat
 #define GETSTATE(m) (&_state)
 static struct arpreq_state _state;
 #endif
@@ -42,6 +40,18 @@ static void set_error(PyObject * exc, const char* format, ...) {
     va_start(args, format);
     set_verror(exc, format, args);
     va_end(args);
+}
+
+static PyObject *
+mac_to_string(unsigned char *eap) {
+    char buf[18];
+    sprintf(buf, "%02hhx:%02hhx:%02hhx:%02hhx:%02hhx:%02hhx",
+            eap[0], eap[1], eap[2], eap[3], eap[4], eap[5]);
+#if PY_MAJOR_VERSION >= 3
+    return PyUnicode_FromString(buf);
+#else
+    return PyString_FromString(buf);
+#endif
 }
 
 static PyObject *
@@ -85,10 +95,7 @@ arpreq(PyObject * self, PyObject * args) {
                 if (ioctl(st->socket, SIOCGIFHWADDR, &ifreq) == -1) {
                     return PyErr_SetFromErrno(PyExc_OSError);
                 }
-                unsigned char *eap = (unsigned char *) ifreq.ifr_hwaddr.sa_data;
-                return PyStringType_FromFormat("%02x:%02x:%02x:%02x:%02x:%02x",
-                                       eap[0], eap[1], eap[2],
-                                       eap[3], eap[4], eap[5]);
+                return mac_to_string((unsigned char *)ifreq.ifr_hwaddr.sa_data);
             }
             strncpy(arpreq.arp_dev, ifa->ifa_name, sizeof(arpreq.arp_dev));
             break;
@@ -110,10 +117,7 @@ arpreq(PyObject * self, PyObject * args) {
     }
 
     if (arpreq.arp_flags & ATF_COM) {
-        unsigned char *eap = (unsigned char *) arpreq.arp_ha.sa_data;
-        return PyStringType_FromFormat("%02x:%02x:%02x:%02x:%02x:%02x",
-                                       eap[0], eap[1], eap[2],
-                                       eap[3], eap[4], eap[5]);
+        return mac_to_string((unsigned char *)arpreq.arp_ha.sa_data);
     } else {
         Py_INCREF(Py_None);
         return Py_None;

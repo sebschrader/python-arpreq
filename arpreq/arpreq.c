@@ -78,6 +78,18 @@ arpreq(PyObject * self, PyObject * args) {
         int ifaddr = ((struct sockaddr_in *) ifa->ifa_addr)->sin_addr.s_addr;
         int netmask = ((struct sockaddr_in *) ifa->ifa_netmask)->sin_addr.s_addr;
         if ((ifaddr & netmask) == (addr & netmask)) {
+            if (ifaddr == addr) {
+                struct ifreq ifreq;
+                strncpy(ifreq.ifr_name, ifa->ifa_name, IFNAMSIZ);
+                freeifaddrs(head_ifa);
+                if (ioctl(st->socket, SIOCGIFHWADDR, &ifreq) == -1) {
+                    return PyErr_SetFromErrno(PyExc_OSError);
+                }
+                unsigned char *eap = (unsigned char *) ifreq.ifr_hwaddr.sa_data;
+                return PyStringType_FromFormat("%02x:%02x:%02x:%02x:%02x:%02x",
+                                       eap[0], eap[1], eap[2],
+                                       eap[3], eap[4], eap[5]);
+            }
             strncpy(arpreq.arp_dev, ifa->ifa_name, sizeof(arpreq.arp_dev));
             break;
         }

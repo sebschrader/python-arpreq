@@ -98,7 +98,7 @@ arpreq(PyObject * self, PyObject * args) {
     }
 
     if (arpreq.arp_flags & ATF_COM) {
-        unsigned char *eap = (unsigned char *) &arpreq.arp_ha.sa_data[0];
+        unsigned char *eap = (unsigned char *) arpreq.arp_ha.sa_data;
         return PyStringType_FromFormat("%02x:%02x:%02x:%02x:%02x:%02x",
                                        eap[0], eap[1], eap[2],
                                        eap[3], eap[4], eap[5]);

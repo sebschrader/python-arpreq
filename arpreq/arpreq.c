@@ -86,14 +86,12 @@ arpreq(PyObject * self, PyObject * args) {
     }
     freeifaddrs(head_ifa);
     if (arpreq.arp_dev[0] == 0) {
-        Py_INCREF(Py_None);
-        return Py_None;
+        Py_RETURN_NONE;
     }
 
     if (ioctl(st->socket, SIOCGARP, &arpreq) == -1) {
         if (errno == ENXIO) {
-            Py_INCREF(Py_None);
-            return Py_None;
+            Py_RETURN_NONE;
         } else {
             return PyErr_SetFromErrno(PyExc_OSError);
         }
@@ -102,8 +100,7 @@ arpreq(PyObject * self, PyObject * args) {
     if (arpreq.arp_flags & ATF_COM) {
         return mac_to_string((unsigned char *)arpreq.arp_ha.sa_data);
     } else {
-        Py_INCREF(Py_None);
-        return Py_None;
+        Py_RETURN_NONE;
     }
 }
 

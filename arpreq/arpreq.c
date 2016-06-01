@@ -25,23 +25,6 @@ struct arpreq_state {
 static struct arpreq_state _state;
 #endif
 
-static void set_verror(PyObject * exc, const char *format, va_list args) {
-    char * msg;
-    if (vasprintf(&msg, format, args) == -1) {
-        PyErr_NoMemory();
-        return;
-    }
-    PyErr_SetString(exc, msg);
-    free(msg);
-}
-
-static void set_error(PyObject * exc, const char* format, ...) {
-    va_list args;
-    va_start(args, format);
-    set_verror(exc, format, args);
-    va_end(args);
-}
-
 static PyObject *
 mac_to_string(unsigned char *eap) {
     char buf[18];
@@ -68,7 +51,7 @@ arpreq(PyObject * self, PyObject * args) {
     struct sockaddr_in *sin = (struct sockaddr_in *) &arpreq.arp_pa;
     sin->sin_family = AF_INET;
     if (inet_pton(AF_INET, addr_str, &(sin->sin_addr)) != 1) {
-        set_error(PyExc_ValueError, "Invalid IPv4 address %s", addr_str);
+        PyErr_Format(PyExc_ValueError, "Invalid IPv4 address %s", addr_str);
         return NULL;
     }
     int addr = sin->sin_addr.s_addr;

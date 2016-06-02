@@ -1,7 +1,20 @@
+import platform
+
 from setuptools import Extension, find_packages, setup
 
 arpreq = Extension('arpreq', sources=['src/arpreq.c'],
                    extra_compile_args=['-std=c99'])
+
+python_major_version = platform.python_version_tuple()[0]
+
+
+tests_require = [
+        'pytest',
+        'netaddr'
+]
+if python_major_version == '2':
+    tests_require.append('ipaddr')
+
 
 setup(name='arpreq',
       author='Sebastian Schrader',
@@ -11,6 +24,10 @@ setup(name='arpreq',
       description="Query the Kernel ARP cache for the MAC address "
                   "corresponding to IP address",
       packages=find_packages(exclude=["*.tests"]),
+      setup_requires=[
+          'pytest-runner'
+      ],
+      tests_require=tests_require,
       ext_modules=[arpreq],
       classifiers=[
           'Development Status :: 5 - Production/Stable',

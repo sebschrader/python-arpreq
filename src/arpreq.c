@@ -14,11 +14,15 @@
 #include <arpa/inet.h>
 #include <ifaddrs.h>
 
+#if PY_MAJOR_VERSION >= 3
+#  define IS_PY3
+#endif
+
 struct arpreq_state {
     int socket;
 };
 
-#if PY_MAJOR_VERSION >= 3
+#ifdef IS_PY3
 #define GETSTATE(m) ((struct arpreq_state*)PyModule_GetState(m))
 #else
 #define GETSTATE(m) (&_state)
@@ -30,7 +34,7 @@ mac_to_string(unsigned char *eap) {
     char buf[18];
     sprintf(buf, "%02hhx:%02hhx:%02hhx:%02hhx:%02hhx:%02hhx",
             eap[0], eap[1], eap[2], eap[3], eap[4], eap[5]);
-#if PY_MAJOR_VERSION >= 3
+#ifdef IS_PY3
     return PyUnicode_FromString(buf);
 #else
     return PyString_FromString(buf);
@@ -109,7 +113,7 @@ static PyMethodDef arpreq_methods[] = {
     {NULL, NULL, 0, NULL}
 };
 
-#if PY_MAJOR_VERSION >= 3
+#ifdef IS_PY3
 
 static void arpreq_free(void *m) {
     close(GETSTATE(m)->socket);
@@ -139,7 +143,7 @@ initarpreq(void)
 #endif
 {
     PyObject * module;
-#if PY_MAJOR_VERSION >= 3
+#ifdef IS_PY3
     module = PyModule_Create(&moduledef);
 #else
     module = Py_InitModule("arpreq", arpreq_methods);
@@ -155,7 +159,7 @@ initarpreq(void)
         Py_DECREF(module);
         INITERROR;
     }
-#if PY_MAJOR_VERSION >= 3
+#ifdef IS_PY3
     return module;
 #endif
 }

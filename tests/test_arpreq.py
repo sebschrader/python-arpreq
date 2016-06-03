@@ -1,5 +1,6 @@
 import sys
 from socket import htonl, inet_ntoa
+from struct import pack
 
 import pytest
 
@@ -11,7 +12,7 @@ def test_localhost():
 
 
 def decode_address(value):
-    return inet_ntoa(htonl(int(value, base=16)).to_bytes(4, 'big'))
+    return inet_ntoa(pack(">I", htonl(int(value, base=16))))
 
 
 def decode_flags(value):

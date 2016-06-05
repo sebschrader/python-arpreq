@@ -38,3 +38,13 @@ def test_default_gateway():
     if not gateway:
         pytest.skip("No default gateway present.")
     assert arpreq(gateway) is not None
+
+
+def test_illegal_argument():
+    with pytest.raises(ValueError):
+        arpreq("Foobar")
+
+
+def test_illegal_type():
+    with pytest.raises(TypeError):
+        arpreq(42)

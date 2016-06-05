@@ -17,6 +17,9 @@
 
 #if PY_MAJOR_VERSION >= 3
 #  define IS_PY3
+#  if PY_VERSION_HEX >= 0x3030000
+#    define IS_PY33
+#  endif
 #endif
 
 struct arpreq_state {
@@ -30,16 +33,30 @@ struct arpreq_state {
 static struct arpreq_state _state;
 #endif
 
-static inline PyObject *
-mac_to_string(const unsigned char *eap) {
-    char buf[18];
-    sprintf(buf, "%02hhx:%02hhx:%02hhx:%02hhx:%02hhx:%02hhx",
-            eap[0], eap[1], eap[2], eap[3], eap[4], eap[5]);
 #ifdef IS_PY3
-    return PyUnicode_FromString(buf);
+#  ifdef IS_PY33
+#    define ASCIIString_New(size) PyUnicode_New(size, 127)
+#    define ASCIIString_DATA(string) PyUnicode_DATA(string)
+#  else
+#    define ASCIIString_New(size) PyUnicode_FromStringAndSize(NULL, size)
+#    define ASCIIString_DATA(string) PyUnicode_AS_DATA(string)
+#  endif
 #else
-    return PyString_FromString(buf);
+#  define ASCIIString_New(size) PyString_FromStringAndSize(NULL, size)
+#  define ASCIIString_DATA(string) PyString_AS_STRING(string)
 #endif
+
+static inline PyObject *
+mac_to_string(const unsigned char *eap)
+{
+    PyObject *string = ASCIIString_New(17);
+    if (!string) {
+        return NULL;
+    }
+    sprintf(ASCIIString_DATA(string), "%02x:%02x:%02x:%02x:%02x:%02x",
+            (int) eap[0], (int) eap[1], (int) eap[2],
+            (int) eap[3], (int) eap[4], (int) eap[5]);
+    return string;
 }
 
 static PyObject *

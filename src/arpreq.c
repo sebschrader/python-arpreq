@@ -31,7 +31,7 @@ static struct arpreq_state _state;
 #endif
 
 static PyObject *
-mac_to_string(unsigned char *eap) {
+mac_to_string(const unsigned char *eap) {
     char buf[18];
     sprintf(buf, "%02hhx:%02hhx:%02hhx:%02hhx:%02hhx:%02hhx",
             eap[0], eap[1], eap[2], eap[3], eap[4], eap[5]);

@@ -132,35 +132,35 @@ static struct PyModuleDef moduledef = {
         arpreq_free
 };
 
-#define INITERROR return NULL
-
-PyMODINIT_FUNC
-PyInit_arpreq(void)
+#  define MOD_INIT(name) PyMODINIT_FUNC PyInit_##name(void)
+#  define MOD_SUCCESS(module) return module
+#  define MOD_ERROR(module) { Py_XDECREF(module); return NULL; }
 #else
-#define INITERROR return
-
-PyMODINIT_FUNC
-initarpreq(void)
+#  define MOD_INIT(name) PyMODINIT_FUNC init##name(void)
+#  define MOD_SUCCESS(module) return
+#  define MOD_ERROR(module) return
 #endif
+
+MOD_INIT(arpreq)
 {
-    PyObject * module;
+    PyObject *module = NULL;
 #ifdef IS_PY3
     module = PyModule_Create(&moduledef);
 #else
     module = Py_InitModule("arpreq", arpreq_methods);
 #endif
     if (module == NULL) {
-        INITERROR;
+        goto fail;
     }
     struct arpreq_state *st = GETSTATE(module);
 
     st->socket = socket(AF_INET, SOCK_DGRAM, 0);
     if (st->socket == -1) {
         PyErr_SetFromErrno(PyExc_OSError);
-        Py_DECREF(module);
-        INITERROR;
+        goto fail;
     }
-#ifdef IS_PY3
-    return module;
-#endif
+    MOD_SUCCESS(module);
+fail:
+    Py_XDECREF(types);
+    MOD_ERROR(module);
 }

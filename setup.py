@@ -35,7 +35,7 @@ setup(name='arpreq',
       author='Sebastian Schrader',
       author_email='sebastian.schrader@ossmail.de',
       url='https://github.com/sebschrader/python-arpreq',
-      version='0.1.0',
+      version='0.2.0',
       description="Query the Kernel ARP cache for the MAC address "
                   "corresponding to IP address",
       packages=find_packages(exclude=["*.tests"]),

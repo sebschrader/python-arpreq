@@ -83,7 +83,11 @@ arpreq(PyObject * self, PyObject * args) {
     uint32_t addr = sin->sin_addr.s_addr;
 
     struct ifaddrs * head_ifa;
+
+    Py_BEGIN_ALLOW_THREADS
+
     if (getifaddrs(&head_ifa) == -1) {
+        Py_BLOCK_THREADS
         return PyErr_SetFromErrno(PyExc_OSError);
     }
 
@@ -102,8 +106,10 @@ arpreq(PyObject * self, PyObject * args) {
                 strncpy(ifreq.ifr_name, ifa->ifa_name, IFNAMSIZ);
                 freeifaddrs(head_ifa);
                 if (ioctl(st->socket, SIOCGIFHWADDR, &ifreq) == -1) {
+                    Py_BLOCK_THREADS
                     return PyErr_SetFromErrno(PyExc_OSError);
                 }
+                Py_BLOCK_THREADS
                 return mac_to_string((unsigned char *)ifreq.ifr_hwaddr.sa_data);
             }
             strncpy(arpreq.arp_dev, ifa->ifa_name, sizeof(arpreq.arp_dev));
@@ -112,16 +118,20 @@ arpreq(PyObject * self, PyObject * args) {
     }
     freeifaddrs(head_ifa);
     if (arpreq.arp_dev[0] == 0) {
+        Py_BLOCK_THREADS
         Py_RETURN_NONE;
     }
 
     if (ioctl(st->socket, SIOCGARP, &arpreq) == -1) {
+        Py_BLOCK_THREADS
         if (errno == ENXIO) {
             Py_RETURN_NONE;
         } else {
             return PyErr_SetFromErrno(PyExc_OSError);
         }
     }
+
+    Py_END_ALLOW_THREADS
 
     if (arpreq.arp_flags & ATF_COM) {
         return mac_to_string((unsigned char *)arpreq.arp_ha.sa_data);

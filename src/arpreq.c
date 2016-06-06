@@ -76,7 +76,8 @@ arpreq(PyObject * self, PyObject * args) {
         PyErr_Format(PyExc_ValueError, "Invalid IPv4 address %s", addr_str);
         return NULL;
     }
-    int addr = sin->sin_addr.s_addr;
+
+    uint32_t addr = sin->sin_addr.s_addr;
 
     struct ifaddrs * head_ifa;
     if (getifaddrs(&head_ifa) == -1) {
@@ -90,8 +91,8 @@ arpreq(PyObject * self, PyObject * args) {
             continue;
         if (ifa->ifa_flags & IFF_POINTOPOINT)
             continue;
-        int ifaddr = ((struct sockaddr_in *) ifa->ifa_addr)->sin_addr.s_addr;
-        int netmask = ((struct sockaddr_in *) ifa->ifa_netmask)->sin_addr.s_addr;
+        uint32_t ifaddr = ((struct sockaddr_in *) ifa->ifa_addr)->sin_addr.s_addr;
+        uint32_t netmask = ((struct sockaddr_in *) ifa->ifa_netmask)->sin_addr.s_addr;
         if ((ifaddr & netmask) == (addr & netmask)) {
             if (ifaddr == addr) {
                 struct ifreq ifreq;

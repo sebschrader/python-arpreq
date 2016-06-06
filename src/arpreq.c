@@ -46,6 +46,9 @@ static struct arpreq_state _state;
 #  define ASCIIString_DATA(string) PyString_AS_STRING(string)
 #endif
 
+/**
+ * Convert a binary MAC address into a lowercase Python str object.
+ */
 static inline PyObject *
 mac_to_string(const unsigned char *eap)
 {
@@ -134,6 +137,11 @@ static PyMethodDef arpreq_methods[] = {
 
 #ifdef IS_PY3
 
+/**
+ * Free the module's resources.
+ *
+ * Closes the socket.
+ */
 static void arpreq_free(void *m) {
     close(GETSTATE(m)->socket);
 }
@@ -159,6 +167,9 @@ static struct PyModuleDef moduledef = {
 #  define MOD_ERROR(module) return
 #endif
 
+/**
+ * Initialize the arpreq module
+ */
 MOD_INIT(arpreq)
 {
     PyObject *module = NULL;

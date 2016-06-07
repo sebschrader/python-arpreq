@@ -58,6 +58,19 @@ def get_default_gateway():
     return None
 
 
+def get_arp_cache():
+    with open("/proc/net/arp") as f:
+        next(f)
+        for line in f:
+            fields = line.strip().split()
+            yield fields[0], fields[3]
+
+
+def test_cached_entries():
+    for ip, mac in get_arp_cache():
+        assert arpreq(ip) == mac
+
+
 def test_default_gateway():
     gateway = get_default_gateway()
     if not gateway:

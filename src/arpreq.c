@@ -1,5 +1,6 @@
 #include <Python.h>
 #include <stddef.h>
+#include <stdbool.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <stdarg.h>
@@ -188,27 +189,28 @@ static PyObject *
 arpreq(PyObject *self, PyObject *arg)
 {
     struct arpreq_state *st = GETSTATE(self);
-    struct arpreq arpreq;
-    memset(&arpreq, 0, sizeof(arpreq));
 
-    struct sockaddr_in *sin = (struct sockaddr_in *) &arpreq.arp_pa;
-    sin->sin_family = AF_INET;
-    if (coerce_argument(self, arg, &(sin->sin_addr)) == -1) {
+    struct sockaddr_in ip_address;
+    ip_address.sin_family = AF_INET;
+    memset(&(ip_address.sin_addr), 0, sizeof(ip_address));
+    if (coerce_argument(self, arg, &(ip_address.sin_addr)) == -1) {
         return NULL;
     }
 
-    uint32_t addr = sin->sin_addr.s_addr;
-
-    struct ifaddrs * head_ifa;
+    uint32_t addr = ip_address.sin_addr.s_addr;
+    bool error = false;
+    bool found = false;
+    struct sockaddr mac_address;
+    struct ifaddrs *head_ifa;
 
     Py_BEGIN_ALLOW_THREADS
 
     if (getifaddrs(&head_ifa) == -1) {
-        Py_BLOCK_THREADS
-        return PyErr_SetFromErrno(PyExc_OSError);
+        error = true;
+        goto cleanup;
     }
 
-    for (struct ifaddrs * ifa = head_ifa; ifa != NULL; ifa = ifa->ifa_next) {
+    for (struct ifaddrs *ifa = head_ifa; ifa != NULL; ifa = ifa->ifa_next) {
         if (ifa->ifa_addr == NULL)
             continue;
         if (ifa->ifa_addr->sa_family != AF_INET)
@@ -221,40 +223,43 @@ arpreq(PyObject *self, PyObject *arg)
             if (ifaddr == addr) {
                 struct ifreq ifreq;
                 strncpy(ifreq.ifr_name, ifa->ifa_name, IFNAMSIZ);
-                freeifaddrs(head_ifa);
                 if (ioctl(st->socket, SIOCGIFHWADDR, &ifreq) == -1) {
-                    Py_BLOCK_THREADS
-                    return PyErr_SetFromErrno(PyExc_OSError);
+                    error = true;
+                } else {
+                    memcpy(&mac_address, &ifreq.ifr_hwaddr, sizeof(mac_address));
+                    found = true;
                 }
-                Py_BLOCK_THREADS
-                return mac_to_string((unsigned char *)ifreq.ifr_hwaddr.sa_data);
+                break;
             }
-            strncpy(arpreq.arp_dev, ifa->ifa_name, sizeof(arpreq.arp_dev));
-            break;
+            struct arpreq arpreq;
+            memset(&arpreq, 0, sizeof(arpreq));
+            memcpy(&(arpreq.arp_pa), &ip_address, sizeof(ip_address));
+            strncpy(arpreq.arp_dev, ifa->ifa_name, IFNAMSIZ);
+            if (ioctl(st->socket, SIOCGARP, &arpreq) == -1) {
+                if (errno == ENXIO) {
+                    continue;
+                } else {
+                    error = true;
+                    break;
+                }
+            }
+            if (arpreq.arp_flags & ATF_COM) {
+                memcpy(&mac_address, &arpreq.arp_ha, sizeof(mac_address));
+                found = true;
+                break;
+            }
         }
     }
+cleanup:
     freeifaddrs(head_ifa);
-    if (arpreq.arp_dev[0] == 0) {
-        Py_BLOCK_THREADS
-        Py_RETURN_NONE;
-    }
-
-    if (ioctl(st->socket, SIOCGARP, &arpreq) == -1) {
-        Py_BLOCK_THREADS
-        if (errno == ENXIO) {
-            Py_RETURN_NONE;
-        } else {
-            return PyErr_SetFromErrno(PyExc_OSError);
-        }
-    }
-
     Py_END_ALLOW_THREADS
-
-    if (arpreq.arp_flags & ATF_COM) {
-        return mac_to_string((unsigned char *)arpreq.arp_ha.sa_data);
-    } else {
-        Py_RETURN_NONE;
+    if (error) {
+        return PyErr_SetFromErrno(PyExc_OSError);
     }
+    if (found) {
+        return mac_to_string((unsigned char *)mac_address.sa_data);
+    }
+    Py_RETURN_NONE;
 }
 
 /**

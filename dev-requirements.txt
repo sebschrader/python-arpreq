@@ -1,0 +1,4 @@
+pytest
+netaddr
+ipaddr;python_version<"3.0"
+mock;python_version<"3.0"

@@ -23,6 +23,7 @@
 #endif
 
 struct arpreq_state {
+    PyObject *ipaddress_types;
     int socket;
 };
 
@@ -62,21 +63,137 @@ mac_to_string(const unsigned char *eap)
     return string;
 }
 
-static PyObject *
-arpreq(PyObject * self, PyObject * args) {
-    const char * addr_str;
-    if (!PyArg_ParseTuple(args, "s", &addr_str)) {
+/**
+ * Return the underlying buffer of Python str if interpreted as ASCII.
+ *
+ * If the Python str object does not store ASCII only data, the encoding of the
+ * result is undefined.
+ */
+static inline const char *
+as_ascii_data(PyObject *python_string)
+{
+#ifdef IS_PY33
+    // Ensure that the string is in canonical form
+    if (PyUnicode_READY(python_string) == -1) {
         return NULL;
     }
-    struct arpreq_state *st = GETSTATE(self);
+#endif
+    return ASCIIString_DATA(python_string);
+}
 
+
+/**
+ * Try to convert a Python int object into an struct in_addr.
+ *
+ * The Python object must ba an int object (unchecked).
+ * Returns -1 on failure and 0 on success.
+ */
+static inline int
+address_from_long(PyObject *object, struct in_addr *address)
+{
+    unsigned long l = PyLong_AsUnsignedLong(object);
+    if (PyErr_Occurred()) {
+        if (PyErr_ExceptionMatches(PyExc_OverflowError)) {
+            goto overflow;
+        }
+        return -1;
+    }
+    if (l > UINT32_MAX) {
+        goto overflow;
+    }
+    address->s_addr = htonl(l);
+    return 0;
+overflow:
+    PyErr_SetString(PyExc_ValueError,
+            "IPv4 addresses given as integers "
+            "must be between zero and UINT32_MAX");
+    return -1;
+}
+
+
+/**
+ * Try to convert a Python str into an struct in_addr.
+ *
+ * The Python object must be a str object (unchecked).
+ * Returns -1 on failure and 0 on success.
+ */
+static inline int
+address_from_string(PyObject *object, struct in_addr *address)
+{
+    const char *ascii_string = as_ascii_data(object);
+    if (!ascii_string) {
+        return -1;
+    }
+    if (inet_pton(AF_INET, ascii_string, address) != 1) {
+#ifdef IS_PY3
+        PyErr_Format(PyExc_ValueError, "Invalid IPv4 address %U", object);
+#else
+        PyErr_Format(PyExc_ValueError, "Invalid IPv4 address %s", ascii_string);
+#endif
+        return -1;
+    }
+    return 0;
+}
+
+
+/**
+ * Try to coerce the arpreq argument into an IPv4 address
+ */
+static inline int
+coerce_argument(PyObject *self, PyObject *object, struct in_addr *address)
+{
+    if (PyLong_Check(object)) {
+        return address_from_long(object, address);
+    }
+#ifndef IS_PY3
+    if (PyInt_Check(object)) {
+        PyObject *python_long = PyNumber_Long(object);
+        if (!python_long) {
+            return -1;
+        }
+        int result = address_from_long(python_long, address);
+        Py_DECREF(python_long);
+        return result;
+    }
+#endif
+#ifdef IS_PY3
+    if (PyUnicode_Check(object)) {
+#else
+    if (PyString_Check(object)) {
+#endif
+        return address_from_string(object, address);
+    }
+    if (PyObject_IsInstance(object, GETSTATE(self)->ipaddress_types)) {
+        PyObject *python_string = PyObject_Str(object);
+        if (!python_string) {
+            return -1;
+        }
+        int result = address_from_string(python_string, address);
+        Py_DECREF(python_string);
+        return result;
+    }
+    PyErr_Format(PyExc_TypeError, "argument must be str, int, "
+            "ipaddr.IPv4, ipaddress.IPv4Address or "
+            "netaddr.IPAddress, not %s",
+            object == Py_None ? "None" : object->ob_type->tp_name);
+    return -1;
+}
+
+/**
+ * Probe the Kernel ARP cache by issuing a SIOCGARP ioctl call.
+ *
+ * See arp(7) for details.
+ */
+static PyObject *
+arpreq(PyObject *self, PyObject *arg)
+{
+    struct arpreq_state *st = GETSTATE(self);
     struct arpreq arpreq;
     memset(&arpreq, 0, sizeof(arpreq));
 
     struct sockaddr_in *sin = (struct sockaddr_in *) &arpreq.arp_pa;
     sin->sin_family = AF_INET;
-    if (inet_pton(AF_INET, addr_str, &(sin->sin_addr)) != 1) {
-        PyErr_Format(PyExc_ValueError, "Invalid IPv4 address %s", addr_str);
+    if (coerce_argument(self, arg, &(sin->sin_addr)) == -1) {
         return NULL;
     }
 
@@ -140,8 +257,37 @@ arpreq(PyObject * self, PyObject * args) {
     }
 }
 
+/**
+ * Try to import a module member given by name from a module given by name and
+ * append it to a given list.
+ *
+ * ImportErrors are ignored.
+ */
+int try_import_member(PyObject *list, const char *module_name,
+                      const char *member_name)
+{
+    PyObject *module = PyImport_ImportModule(module_name);
+    if (!module) {
+        if (PyErr_ExceptionMatches(PyExc_ImportError)) {
+            PyErr_Clear();
+            return 0;
+        }
+        return -1;
+    }
+    PyObject *member = PyObject_GetAttrString(module, member_name);
+    Py_DECREF(module);
+    if (!member) {
+        return -1;
+    }
+    int success = PyList_Append(list, member);
+    Py_DECREF(member);
+    return success;
+}
+
+static const char arpreq_doc[] = "Translate IPv4 addresses to MAC addresses using the kernel's arp(7) interface.";
+
 static PyMethodDef arpreq_methods[] = {
-    {"arpreq", arpreq, METH_VARARGS, "Probe the kernel ARP cache for the MAC address of an IPv4 address."},
+    {"arpreq", arpreq, METH_O, "Probe the kernel ARP cache for the MAC address of an IPv4 address."},
     {NULL, NULL, 0, NULL}
 };
 
@@ -152,19 +298,43 @@ static PyMethodDef arpreq_methods[] = {
  *
  * Closes the socket.
  */
-static void arpreq_free(void *m) {
+static void
+arpreq_free(void *m)
+{
     close(GETSTATE(m)->socket);
+}
+
+
+/**
+ * Traverse the references this module holds during GC
+ */
+static int
+arpreq_traverse(PyObject *m, visitproc visit, void *arg)
+{
+    Py_VISIT(GETSTATE(m)->ipaddress_types);
+    return 0;
+}
+
+
+/**
+ * Clear the module.
+ */
+static int
+arpreq_clear(PyObject *m)
+{
+    Py_CLEAR(GETSTATE(m)->ipaddress_types);
+    return 0;
 }
 
 static struct PyModuleDef moduledef = {
         PyModuleDef_HEAD_INIT,
         "arpreq",
-        "Translate IP addresses to MAC addresses using the kernel's arp(7) interface.",
+        arpreq_doc,
         sizeof(struct arpreq_state),
         arpreq_methods,
         NULL,
-        NULL,
-        NULL,
+        arpreq_traverse,
+        arpreq_clear,
         arpreq_free
 };
 
@@ -183,10 +353,11 @@ static struct PyModuleDef moduledef = {
 MOD_INIT(arpreq)
 {
     PyObject *module = NULL;
+    PyObject *types = NULL;
 #ifdef IS_PY3
     module = PyModule_Create(&moduledef);
 #else
-    module = Py_InitModule("arpreq", arpreq_methods);
+    module = Py_InitModule3("arpreq", arpreq_methods, arpreq_doc);
 #endif
     if (module == NULL) {
         goto fail;
@@ -198,6 +369,23 @@ MOD_INIT(arpreq)
         PyErr_SetFromErrno(PyExc_OSError);
         goto fail;
     }
+
+    if (!(types = PyList_New(0))) {
+        goto fail;
+    }
+    if (try_import_member(types, "ipaddr", "IPv4Address") == -1) {
+        goto fail;
+    }
+    if (try_import_member(types, "ipaddress", "IPv4Address") == -1) {
+        goto fail;
+    }
+    if (try_import_member(types, "netaddr", "IPAddress") == -1) {
+        goto fail;
+    }
+    if (!(st->ipaddress_types = PySequence_Tuple(types))) {
+        goto fail;
+    }
+    Py_DECREF(types);
     MOD_SUCCESS(module);
 fail:
     Py_XDECREF(types);

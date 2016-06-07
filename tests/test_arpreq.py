@@ -2,13 +2,38 @@ import sys
 from socket import htonl, inet_ntoa
 from struct import pack
 
+import netaddr
 import pytest
+
+if sys.version_info >= (3,):
+    import ipaddress
+    from unittest.mock import Mock
+    ipaddr = Mock()
+    long = Mock()
+else:
+    import ipaddr
+    from mock import Mock
+    ipaddress = Mock()
 
 from arpreq import arpreq
 
 
-def test_localhost():
-    assert arpreq('127.0.0.1') == '00:00:00:00:00:00'
+python2 = pytest.mark.skipif(sys.version_info >= (3,),
+                             reason='Requires Python 2')
+python3 = pytest.mark.skipif(sys.version_info < (3,),
+                             reason='Requires Python 3')
+
+
+@pytest.mark.parametrize("value", [
+    0x7F000001,
+    python2(long(0x7F000001)),
+    '127.0.0.1',
+    netaddr.IPAddress('127.0.0.1'),
+    python2(ipaddr.IPv4Address('127.0.0.1')),
+    python3(ipaddress.IPv4Address('127.0.0.1')),
+])
+def test_localhost(value):
+    assert arpreq(value) == '00:00:00:00:00:00'
 
 
 def decode_address(value):
@@ -40,11 +65,12 @@ def test_default_gateway():
     assert arpreq(gateway) is not None
 
 
-def test_illegal_argument():
+@pytest.mark.parametrize("value", ["Foobar", -1, 1 << 32, 1 << 64])
+def test_illegal_argument(value):
     with pytest.raises(ValueError):
-        arpreq("Foobar")
+        arpreq(value)
 
 
 def test_illegal_type():
     with pytest.raises(TypeError):
-        arpreq(42)
+        arpreq(None)

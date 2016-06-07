@@ -180,6 +180,16 @@ coerce_argument(PyObject *self, PyObject *object, struct in_addr *address)
     return -1;
 }
 
+PyDoc_STRVAR(arpreq_arpreq_doc,
+"arpreq(ipv4_address) -> mac\n"
+"\n"
+"Probe the kernel ARP cache for the MAC address of an IPv4 address.\n"
+"The IPv4 address may be a str, int, ipaddr.IPv4Address,\n"
+"ipaddress.IPv4Address or netaddr.IPAddress object.\n"
+"\n"
+"Note: No actual ARP request is performed, only the kernel cache is queried."
+);
+
 /**
  * Probe the Kernel ARP cache by issuing a SIOCGARP ioctl call.
  *
@@ -289,10 +299,12 @@ int try_import_member(PyObject *list, const char *module_name,
     return success;
 }
 
-static const char arpreq_doc[] = "Translate IPv4 addresses to MAC addresses using the kernel's arp(7) interface.";
+PyDoc_STRVAR(arpreq_doc,
+"Translate IPv4 addresses to MAC addresses using the kernel's arp(7) interface."
+);
 
 static PyMethodDef arpreq_methods[] = {
-    {"arpreq", arpreq, METH_O, "Probe the kernel ARP cache for the MAC address of an IPv4 address."},
+    {"arpreq", arpreq, METH_O, arpreq_arpreq_doc},
     {NULL, NULL, 0, NULL}
 };
 

@@ -41,7 +41,7 @@ setup(name='arpreq',
       description="Query the Kernel ARP cache for the MAC address "
                   "corresponding to IP address",
       long_description=readme,
-      packages=find_packages(exclude=["*.tests"]),
+      packages=find_packages(exclude=['tests']),
       setup_requires=[
           'pytest-runner'
       ],

@@ -30,6 +30,8 @@ if python_major_version == '2':
     tests_require.append('ipaddr')
     tests_require.append('mock')
 
+with open('README.rst') as f:
+    readme = f.read()
 
 setup(name='arpreq',
       author='Sebastian Schrader',
@@ -38,6 +40,7 @@ setup(name='arpreq',
       version='0.2.0',
       description="Query the Kernel ARP cache for the MAC address "
                   "corresponding to IP address",
+      long_description=readme,
       packages=find_packages(exclude=["*.tests"]),
       setup_requires=[
           'pytest-runner'

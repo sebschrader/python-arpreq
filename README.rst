@@ -18,8 +18,8 @@ a given IP address.
 Usage
 -----
 
-The ``arpreq`` module exposes a single function ``arpreq``. This
-functions expects an IPv4 address as a string.
+The ``arpreq`` module exposes a single function ``arpreq``, that will
+resolve a given IPv4 address into a MAC address.
 
 An IP address can only be resolved to a MAC address if it is on the same
 subnet as your machine.
@@ -39,6 +39,23 @@ If a IP address can not be resolved to an MAC address, None is returned.
 
     >>> arpreq.arpreq('8.8.8.8') is None
     True
+
+IP addresses may be also be specified as int or rich IP address data type
+of the common ``ipaddr``, ``ipaddress``, or ``netaddr`` modules.
+
+.. code:: python
+
+    >>> arpreq.arpreq(0x7F000001)
+    '00:00:00:00:00:00'
+    >>> import netaddr
+    >>> arpreq.arpreq(netaddr.IPAddress('127.0.0.1'))
+    '00:00:00:00:00:00'
+    >>> import ipaddr # on Python 2
+    >>> arpreq.arpreq(ipaddr.IPv4Address('127.0.0.1'))
+    '00:00:00:00:00:00'
+    >>> import ipaddress # on Python 3
+    >>> arpreq.arpreq(ipaddress.IPv4Address('127.0.0.1'))
+    '00:00:00:00:00:00'
 
 Supported Platforms
 -------------------

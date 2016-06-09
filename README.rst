@@ -1,6 +1,9 @@
 arpreq
 ======
 
+.. image:: https://travis-ci.org/sebschrader/python-arpreq.svg?branch=master
+    :target: https://travis-ci.org/sebschrader/python-arpreq
+
 Python C extension to query the Kernel ARP cache for the MAC address of
 a given IP address.
 

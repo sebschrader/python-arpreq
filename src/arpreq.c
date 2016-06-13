@@ -344,6 +344,9 @@ arpreq_exec(PyObject *module)
     }
     return 0;
 fail:
+    if (st->socket >= 0) {
+        close(st->socket);
+    }
     Py_XDECREF(types);
     return -1;
 }

@@ -21,6 +21,9 @@
 #  if PY_VERSION_HEX >= 0x3030000
 #    define IS_PY33
 #  endif
+#  if PY_VERSION_HEX >= 0x3050000
+#    define IS_PY35
+#  endif
 #endif
 
 struct arpreq_state {
@@ -308,6 +311,42 @@ static PyMethodDef arpreq_methods[] = {
     {NULL, NULL, 0, NULL}
 };
 
+/**
+ * Execute the module
+ */
+static int
+arpreq_exec(PyObject *module)
+{
+    PyObject *types = NULL;
+    struct arpreq_state *st = GETSTATE(module);
+
+    st->socket = socket(AF_INET, SOCK_DGRAM, 0);
+    if (st->socket == -1) {
+        PyErr_SetFromErrno(PyExc_OSError);
+        goto fail;
+    }
+
+    if (!(types = PyList_New(0))) {
+        goto fail;
+    }
+    if (try_import_member(types, "ipaddr", "IPv4Address") == -1) {
+        goto fail;
+    }
+    if (try_import_member(types, "ipaddress", "IPv4Address") == -1) {
+        goto fail;
+    }
+    if (try_import_member(types, "netaddr", "IPAddress") == -1) {
+        goto fail;
+    }
+    if (!(st->ipaddress_types = PySequence_Tuple(types))) {
+        goto fail;
+    }
+    return 0;
+fail:
+    Py_XDECREF(types);
+    return -1;
+}
+
 #ifdef IS_PY3
 
 /**
@@ -343,13 +382,24 @@ arpreq_clear(PyObject *m)
     return 0;
 }
 
+#ifdef IS_PY35
+static PyModuleDef_Slot arpreq_slots[] = {
+    {Py_mod_exec, arpreq_exec},
+    {0, NULL},
+};
+#endif
+
 static struct PyModuleDef moduledef = {
         PyModuleDef_HEAD_INIT,
         "arpreq",
         arpreq_doc,
         sizeof(struct arpreq_state),
         arpreq_methods,
+#ifdef IS_PY35
+        arpreq_slots,
+#else
         NULL,
+#endif
         arpreq_traverse,
         arpreq_clear,
         arpreq_free
@@ -358,7 +408,7 @@ static struct PyModuleDef moduledef = {
 #  define MOD_INIT(name) PyMODINIT_FUNC PyInit_##name(void)
 #  define MOD_SUCCESS(module) return module
 #  define MOD_ERROR(module) { Py_XDECREF(module); return NULL; }
-#else
+#else /* IS_PY3 */
 #  define MOD_INIT(name) PyMODINIT_FUNC init##name(void)
 #  define MOD_SUCCESS(module) return
 #  define MOD_ERROR(module) return
@@ -369,42 +419,22 @@ static struct PyModuleDef moduledef = {
  */
 MOD_INIT(arpreq)
 {
-    PyObject *module = NULL;
-    PyObject *types = NULL;
-#ifdef IS_PY3
-    module = PyModule_Create(&moduledef);
+#ifdef IS_PY35
+    return PyModuleDef_Init(&moduledef);
 #else
-    module = Py_InitModule3("arpreq", arpreq_methods, arpreq_doc);
-#endif
+#  ifdef IS_PY3
+    PyObject *module = PyModule_Create(&moduledef);
+#  else
+    PyObject *module = Py_InitModule3("arpreq", arpreq_methods, arpreq_doc);
+#  endif
     if (module == NULL) {
         goto fail;
     }
-    struct arpreq_state *st = GETSTATE(module);
-
-    st->socket = socket(AF_INET, SOCK_DGRAM, 0);
-    if (st->socket == -1) {
-        PyErr_SetFromErrno(PyExc_OSError);
+    if (arpreq_exec(module) == -1) {
         goto fail;
     }
-
-    if (!(types = PyList_New(0))) {
-        goto fail;
-    }
-    if (try_import_member(types, "ipaddr", "IPv4Address") == -1) {
-        goto fail;
-    }
-    if (try_import_member(types, "ipaddress", "IPv4Address") == -1) {
-        goto fail;
-    }
-    if (try_import_member(types, "netaddr", "IPAddress") == -1) {
-        goto fail;
-    }
-    if (!(st->ipaddress_types = PySequence_Tuple(types))) {
-        goto fail;
-    }
-    Py_DECREF(types);
     MOD_SUCCESS(module);
 fail:
-    Py_XDECREF(types);
     MOD_ERROR(module);
+#endif /* IS_PY35 */
 }

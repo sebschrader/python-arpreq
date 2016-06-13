@@ -319,6 +319,7 @@ arpreq_exec(PyObject *module)
 {
     PyObject *types = NULL;
     struct arpreq_state *st = GETSTATE(module);
+    memset(st, 0, sizeof(*st));
 
     st->socket = socket(AF_INET, SOCK_DGRAM, 0);
     if (st->socket == -1) {

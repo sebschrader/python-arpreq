@@ -214,6 +214,7 @@ arpreq(PyObject *self, PyObject *arg)
     bool error = false;
     bool found = false;
     struct sockaddr mac_address;
+    memset(&mac_address, 0, sizeof(mac_address));
     struct ifaddrs *head_ifa;
 
     Py_BEGIN_ALLOW_THREADS

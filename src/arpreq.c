@@ -201,8 +201,8 @@ arpreq(PyObject *self, PyObject *arg)
     struct arpreq_state *st = GETSTATE(self);
 
     struct sockaddr_in ip_address;
+    memset(&ip_address, 0, sizeof(ip_address));
     ip_address.sin_family = AF_INET;
-    memset(&(ip_address.sin_addr), 0, sizeof(ip_address));
     if (coerce_argument(self, arg, &(ip_address.sin_addr)) == -1) {
         return NULL;
     }

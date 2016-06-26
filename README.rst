@@ -63,3 +63,31 @@ Supported Platforms
 This extension has only been tested on Linux, it should however work on
 any platform that supports the ``SIOCGARP`` ioctl, which is virtually
 every BSD, Linux and Mac OS.
+
+Changelog
+---------
+
+v0.3.0 (in development)
+^^^^^^^^^^^^^^^^^^^^^^^
+
+* Use PEP 489 multi-phase extension module initialization on Python 3.5+
+* Close socket if module initialization failed
+* Code cleanup
+
+v0.2.1 (2016-06-26)
+^^^^^^^^^^^^^^^^^^^
+* Fix memset overflow
+
+v0.2.0 (2016-06-09)
+^^^^^^^^^^^^^^^^^^^
+
+* Provide Python wheels
+* Support int and rich IP address objects as IP address arguments
+* Release the GIL during arpreq
+* Add units tests
+* Rework MAC string creation
+* Restructure module initialization
+
+v0.1.0 (2015-11-28)
+^^^^^^^^^^^^^^^^^^^
+* Initial release

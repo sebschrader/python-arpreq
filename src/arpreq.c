@@ -285,7 +285,8 @@ cleanup:
  *
  * ImportErrors are ignored.
  */
-int try_import_member(PyObject *list, const char *module_name,
+static int
+try_import_member(PyObject *list, const char *module_name,
                       const char *member_name)
 {
     PyObject *module = PyImport_ImportModule(module_name);

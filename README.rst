@@ -7,6 +7,8 @@ arpreq
     :target: https://pypi.python.org/pypi/arpreq
 .. image:: https://img.shields.io/pypi/pyversions/arpreq.svg?maxAge=2592000
     :target: https://pypi.python.org/pypi/arpreq
+.. image:: https://img.shields.io/pypi/implementation/arpreq.svg?maxAge=2592000
+    :target: https://pypi.python.org/pypi/arpreq
 .. image:: https://img.shields.io/pypi/wheel/arpreq.svg?maxAge=2592000
     :target: https://pypi.python.org/pypi/arpreq
 .. image:: https://img.shields.io/pypi/l/arpreq.svg?maxAge=2592000

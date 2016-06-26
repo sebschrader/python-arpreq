@@ -400,7 +400,10 @@ fail:
 static void
 arpreq_free(void *m)
 {
-    close(GETSTATE(m)->socket);
+    struct arpreq_state *st = GETSTATE(m);
+    if (st->socket >= 0) {
+        close(st->socket);
+    }
 }
 
 

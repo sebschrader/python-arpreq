@@ -69,8 +69,8 @@ every BSD, Linux and Mac OS.
 Changelog
 ---------
 
-v0.3.0 (in development)
-^^^^^^^^^^^^^^^^^^^^^^^
+v0.3.0 (2016-06-26)
+^^^^^^^^^^^^^^^^^^^
 
 * Use PEP 489 multi-phase extension module initialization on Python 3.5+
 * Close socket if module initialization failed

@@ -69,6 +69,10 @@ every BSD, Linux and Mac OS.
 Changelog
 ---------
 
+v0.3.1 (2016-07-06)
+^^^^^^^^^^^^^^^^^^^
+* Don't use private _PyErr_ChainExceptions (breaks on Debian Jessie)
+
 v0.3.0 (2016-06-26)
 ^^^^^^^^^^^^^^^^^^^
 

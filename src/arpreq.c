@@ -21,9 +21,6 @@
 #  if PY_VERSION_HEX >= 0x3030000
 #    define IS_PY33
 #  endif
-#  if PY_VERSION_HEX >= 0x3040000
-#    define IS_PY34
-#  endif
 #  if PY_VERSION_HEX >= 0x3050000
 #    define IS_PY35
 #  endif
@@ -317,30 +314,6 @@ static PyMethodDef arpreq_methods[] = {
 };
 
 
-#if defined IS_PY3 && !defined IS_PY34
-static void
-_PyErr_ChainExceptions(PyObject *exc, PyObject *val, PyObject *tb)
-{
-    if (exc == NULL)
-        return;
-
-    if (PyErr_Occurred()) {
-        PyObject *exc2, *val2, *tb2;
-        PyErr_Fetch(&exc2, &val2, &tb2);
-        PyErr_NormalizeException(&exc, &val, &tb);
-        Py_DECREF(exc);
-        Py_XDECREF(tb);
-        PyErr_NormalizeException(&exc2, &val2, &tb2);
-        PyException_SetContext(val2, val);
-        PyErr_Restore(exc2, val2, tb2);
-    }
-    else {
-        PyErr_Restore(exc, val, tb);
-    }
-}
-#endif
-
-
 /**
  * Execute the module
  */
@@ -379,8 +352,15 @@ fail:
 #ifdef IS_PY3
             PyObject *type, *value, *traceback;
             PyErr_Fetch(&type, &value, &traceback);
+            PyErr_NormalizeException(&type, &value, &traceback);
+            Py_DECREF(type);
+            Py_XDECREF(traceback);
             PyErr_SetFromErrno(PyExc_OSError);
-            _PyErr_ChainExceptions(type, value, traceback);
+            PyObject *type2, *value2, *traceback2;
+            PyErr_Fetch(&type2, &value2, &traceback2);
+            PyErr_NormalizeException(&type2, &value2, &traceback2);
+            PyException_SetContext(value2, value);
+            PyErr_Restore(type2, value2, traceback2);
 #else
             PyErr_SetFromErrno(PyExc_OSError);
 #endif

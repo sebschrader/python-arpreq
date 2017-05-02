@@ -83,6 +83,7 @@ def test_illegal_argument(value):
         arpreq(value)
 
 
-def test_illegal_type():
+@pytest.mark.parametrize("value", [None, object(), [], ()])
+def test_illegal_type(value):
     with pytest.raises(TypeError):
-        arpreq(None)
+        arpreq(value)

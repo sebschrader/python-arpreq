@@ -2,18 +2,16 @@ import sys
 from socket import htonl, inet_ntoa
 from struct import pack
 
+import ipaddress
 import netaddr
 import pytest
 
 if sys.version_info >= (3,):
-    import ipaddress
     from unittest.mock import Mock
+    long = int
     ipaddr = Mock()
-    long = Mock()
 else:
     import ipaddr
-    from mock import Mock
-    ipaddress = Mock()
 
 from arpreq import arpreq
 
@@ -26,11 +24,11 @@ python3 = pytest.mark.skipif(sys.version_info < (3,),
 
 @pytest.mark.parametrize("value", [
     0x7F000001,
-    python2(long(0x7F000001)),
+    long(0x7F000001),
     '127.0.0.1',
     netaddr.IPAddress('127.0.0.1'),
     python2(ipaddr.IPv4Address('127.0.0.1')),
-    python3(ipaddress.IPv4Address('127.0.0.1')),
+    ipaddress.IPv4Address(u'127.0.0.1'),
 ])
 def test_localhost(value):
     assert arpreq(value) == '00:00:00:00:00:00'

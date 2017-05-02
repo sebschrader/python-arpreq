@@ -28,7 +28,7 @@ tests_require = [
 ]
 if python_major_version == '2':
     tests_require.append('ipaddr')
-    tests_require.append('mock')
+    tests_require.append('ipaddress')
 
 with open('README.rst') as f:
     readme = f.read()

@@ -55,8 +55,8 @@ of the common ``ipaddr``, ``ipaddress``, or ``netaddr`` modules.
     >>> import ipaddr # on Python 2
     >>> arpreq.arpreq(ipaddr.IPv4Address('127.0.0.1'))
     '00:00:00:00:00:00'
-    >>> import ipaddress # on Python 3
-    >>> arpreq.arpreq(ipaddress.IPv4Address('127.0.0.1'))
+    >>> import ipaddress
+    >>> arpreq.arpreq(ipaddress.IPv4Address(u'127.0.0.1'))
     '00:00:00:00:00:00'
 
 Supported Platforms

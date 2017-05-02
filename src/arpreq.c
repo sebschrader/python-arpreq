@@ -233,7 +233,9 @@ arpreq(PyObject *self, PyObject *arg)
             continue;
         uint32_t ifaddr = ((struct sockaddr_in *) ifa->ifa_addr)->sin_addr.s_addr;
         uint32_t netmask = ((struct sockaddr_in *) ifa->ifa_netmask)->sin_addr.s_addr;
-        if ((ifaddr & netmask) == (addr & netmask)) {
+        uint32_t dstaddr = ((struct sockaddr_in *) ifa->ifa_dstaddr)->sin_addr.s_addr;
+        if (((netmask == 0xFFFFFFFF) && (addr == dstaddr))
+                || (ifaddr & netmask) == (addr & netmask)) {
             if (ifaddr == addr) {
                 struct ifreq ifreq;
                 strncpy(ifreq.ifr_name, ifa->ifa_name, IFNAMSIZ);

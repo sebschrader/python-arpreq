@@ -62,8 +62,9 @@ def get_arp_cache():
     with open("/proc/net/arp") as f:
         next(f)
         for line in f:
-            fields = line.strip().split()
-            yield fields[0], fields[3]
+            ip_address, hw_type, flags, hw_address, mask, device = line.split()
+            if decode_flags(flags) & 0x2:
+                yield ip_address, hw_address
 
 
 def test_cached_entries():

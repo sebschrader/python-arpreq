@@ -18,12 +18,10 @@
 
 #if PY_MAJOR_VERSION >= 3
 #  define IS_PY3
-#  if PY_VERSION_HEX >= 0x3030000
-#    define IS_PY33
-#  endif
-#  if PY_VERSION_HEX >= 0x3050000
-#    define IS_PY35
-#  endif
+#endif
+
+#if (PY_VERSION_HEX >= 0x3050000) && !defined(PYPY_VERSION_NUM)
+#  define HAVE_PEP489
 #endif
 
 struct arpreq_state {
@@ -385,7 +383,7 @@ arpreq_clear(PyObject *m)
     return 0;
 }
 
-#ifdef IS_PY35
+#ifdef HAVE_PEP489
 static PyModuleDef_Slot arpreq_slots[] = {
     {Py_mod_exec, arpreq_exec},
     {0, NULL},
@@ -398,7 +396,7 @@ static struct PyModuleDef moduledef = {
         arpreq_doc,
         sizeof(struct arpreq_state),
         arpreq_methods,
-#ifdef IS_PY35
+#ifdef HAVE_PEP489
         arpreq_slots,
 #else
         NULL,
@@ -422,7 +420,7 @@ static struct PyModuleDef moduledef = {
  */
 MOD_INIT(arpreq)
 {
-#ifdef IS_PY35
+#ifdef HAVE_PEP489
     return PyModuleDef_Init(&moduledef);
 #else
 #  ifdef IS_PY3
@@ -439,5 +437,5 @@ MOD_INIT(arpreq)
     MOD_SUCCESS(module);
 fail:
     MOD_ERROR(module);
-#endif /* IS_PY35 */
+#endif /* HAVE_PEP489 */
 }

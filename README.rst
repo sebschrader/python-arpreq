@@ -69,6 +69,12 @@ every BSD, Linux and Mac OS.
 Changelog
 ---------
 
+v0.3.2 (2017-05-03)
+^^^^^^^^^^^^^^^^^^^
+* Support point-to-point veth pairs (See #6)
+* Accept unicode objects on Python 2 and bytes objects on Python 3 (See #5)
+* Some test improvements
+
 v0.3.1 (2016-07-06)
 ^^^^^^^^^^^^^^^^^^^
 * Don't use private _PyErr_ChainExceptions (breaks on Debian Jessie)

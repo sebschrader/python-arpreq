@@ -38,53 +38,21 @@ struct arpreq_state {
 static struct arpreq_state _state;
 #endif
 
-#ifdef IS_PY3
-#  ifdef IS_PY33
-#    define ASCIIString_New(size) PyUnicode_New(size, 127)
-#    define ASCIIString_DATA(string) PyUnicode_DATA(string)
-#  else
-#    define ASCIIString_New(size) PyUnicode_FromStringAndSize(NULL, size)
-#    define ASCIIString_DATA(string) PyUnicode_AS_DATA(string)
-#  endif
-#else
-#  define ASCIIString_New(size) PyString_FromStringAndSize(NULL, size)
-#  define ASCIIString_DATA(string) PyString_AS_STRING(string)
-#endif
-
 /**
  * Convert a binary MAC address into a lowercase Python str object.
  */
 static inline PyObject *
 mac_to_string(const unsigned char *eap)
 {
-    PyObject *string = ASCIIString_New(17);
-    if (!string) {
-        return NULL;
-    }
-    sprintf(ASCIIString_DATA(string), "%02x:%02x:%02x:%02x:%02x:%02x",
-            (int) eap[0], (int) eap[1], (int) eap[2],
-            (int) eap[3], (int) eap[4], (int) eap[5]);
-    return string;
-}
-
-/**
- * Return the underlying buffer of Python str if interpreted as ASCII.
- *
- * If the Python str object does not store ASCII only data, the encoding of the
- * result is undefined.
- */
-static inline const char *
-as_ascii_data(PyObject *python_string)
-{
-#ifdef IS_PY33
-    // Ensure that the string is in canonical form
-    if (PyUnicode_READY(python_string) == -1) {
-        return NULL;
-    }
+    char buffer[18];
+    sprintf(buffer, "%02hhx:%02hhx:%02hhx:%02hhx:%02x:%02hhx",
+            eap[0], eap[1], eap[2], eap[3], eap[4], eap[5]);
+#ifdef IS_PY3
+    return PyUnicode_DecodeASCII(buffer, sizeof(buffer) - 1, NULL);
+#else
+    return PyString_FromStringAndSize(buffer, sizeof(buffer) - 1);
 #endif
-    return ASCIIString_DATA(python_string);
 }
-
 
 /**
  * Try to convert a Python int object into an struct in_addr.
@@ -114,29 +82,33 @@ overflow:
     return -1;
 }
 
-
-/**
- * Try to convert a Python str into an struct in_addr.
- *
- * The Python object must be a str object (unchecked).
- * Returns -1 on failure and 0 on success.
- */
 static inline int
-address_from_string(PyObject *object, struct in_addr *address)
+address_from_bytes(PyObject *bytes, struct in_addr *address)
 {
-    const char *ascii_string = as_ascii_data(object);
-    if (!ascii_string) {
-        return -1;
-    }
+    const char *ascii_string = PyBytes_AS_STRING(bytes);
     if (inet_pton(AF_INET, ascii_string, address) != 1) {
-#ifdef IS_PY3
-        PyErr_Format(PyExc_ValueError, "Invalid IPv4 address %U", object);
-#else
-        PyErr_Format(PyExc_ValueError, "Invalid IPv4 address %s", ascii_string);
-#endif
+        PyErr_Format(PyExc_ValueError, "Invalid IPv4 address: %s", ascii_string);
         return -1;
     }
     return 0;
+}
+
+
+/**
+ * Try to convert a Python unicode object into an struct in_addr.
+ *
+ * The Python object must be a unicode object (unchecked).
+ * Returns -1 on failure and 0 on success.
+ */
+static inline int
+address_from_unicode(PyObject *unicode, struct in_addr *address)
+{
+    PyObject *bytes = PyUnicode_AsASCIIString(unicode);
+    if (bytes == NULL)
+        return -1;
+    int rv = address_from_bytes(bytes, address);
+    Py_DECREF(bytes);
+    return rv;
 }
 
 
@@ -160,19 +132,22 @@ coerce_argument(PyObject *self, PyObject *object, struct in_addr *address)
         return result;
     }
 #endif
-#ifdef IS_PY3
     if (PyUnicode_Check(object)) {
-#else
-    if (PyString_Check(object)) {
-#endif
-        return address_from_string(object, address);
+        return address_from_unicode(object, address);
+    }
+    if (PyBytes_Check(object)) {
+        return address_from_bytes(object, address);
     }
     if (PyObject_IsInstance(object, GETSTATE(self)->ipaddress_types)) {
         PyObject *python_string = PyObject_Str(object);
         if (!python_string) {
             return -1;
         }
-        int result = address_from_string(python_string, address);
+#ifdef IS_PY3
+        int result = address_from_unicode(python_string, address);
+#else
+        int result = address_from_bytes(python_string, address);
+#endif
         Py_DECREF(python_string);
         return result;
     }

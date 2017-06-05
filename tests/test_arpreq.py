@@ -6,31 +6,25 @@ import ipaddress
 import netaddr
 import pytest
 
-if sys.version_info >= (3,):
-    from unittest.mock import Mock
-    long = int
-    ipaddr = Mock()
-else:
-    import ipaddr
-
 from arpreq import arpreq
 
-
-python2 = pytest.mark.skipif(sys.version_info >= (3,),
-                             reason='Requires Python 2')
-python3 = pytest.mark.skipif(sys.version_info < (3,),
-                             reason='Requires Python 3')
-
-
-@pytest.mark.parametrize("value", [
+localhost_values = [
     0x7F000001,
-    long(0x7F000001),
     b'127.0.0.1',
     u'127.0.0.1',
     netaddr.IPAddress('127.0.0.1'),
-    python2(ipaddr.IPv4Address('127.0.0.1')),
     ipaddress.IPv4Address(u'127.0.0.1'),
-])
+]
+
+if sys.version_info < (3,):
+    import ipaddr
+    localhost_values.extend([
+        long(0x7F000001),
+        ipaddr.IPv4Address('127.0.0.1'),
+    ])
+
+
+@pytest.mark.parametrize("value", localhost_values)
 def test_localhost(value):
     assert arpreq(value) == '00:00:00:00:00:00'
 

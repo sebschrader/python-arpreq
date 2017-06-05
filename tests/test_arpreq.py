@@ -72,7 +72,13 @@ def test_default_gateway():
     assert arpreq(gateway) is not None
 
 
-@pytest.mark.parametrize("value", ["Foobar", -1, 1 << 32, 1 << 64, u"\u201c\ufffd\u201d"])
+@pytest.mark.parametrize("value", [
+    "Foobar",
+    -1,
+    1 << 32,
+    1 << 64,
+    u"\u201c\ufffd\u201d"
+])
 def test_illegal_argument(value):
     with pytest.raises(ValueError):
         arpreq(value)

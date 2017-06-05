@@ -1,0 +1,54 @@
+--- a/setup.py
++++ b/setup.py
+@@ -43,9 +43,6 @@
+       long_description=readme,
+       package_dir={'': 'src'},
+       packages=find_packages(exclude=['tests']),
+-      setup_requires=[
+-          'pytest-runner'
+-      ],
+       tests_require=tests_require,
+       ext_modules=[arpreq],
+       license='MIT',
+--- a/tests/test_arpreq.py
++++ b/tests/test_arpreq.py
+@@ -1,9 +1,9 @@
++import platform
+ import sys
+ from socket import htonl, inet_ntoa
+ from struct import pack
+ 
+ import ipaddress
+-import netaddr
+ import pytest
+ 
+ from arpreq import arpreq
+@@ -12,17 +12,26 @@
+     0x7F000001,
+     b'127.0.0.1',
+     u'127.0.0.1',
+-    netaddr.IPAddress('127.0.0.1'),
+     ipaddress.IPv4Address(u'127.0.0.1'),
+ ]
+ 
+ if sys.version_info < (3,):
+-    import ipaddr
+     localhost_values.extend([
+         long(0x7F000001),
++    ])
++
++if platform.python_implementation() == 'CPython' and sys.version_info < (3,):
++    import ipaddr
++    localhost_values.extend([
+         ipaddr.IPv4Address('127.0.0.1'),
+     ])
+ 
++if platform.python_implementation() == 'CPython':
++    import netaddr
++    localhost_values.extend([
++        netaddr.IPAddress('127.0.0.1'),
++    ])
++
+ 
+ @pytest.mark.parametrize("value", localhost_values)
+ def test_localhost(value):

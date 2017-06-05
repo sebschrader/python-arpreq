@@ -49,6 +49,7 @@ setup(name='arpreq',
       tests_require=tests_require,
       ext_modules=[arpreq],
       license='MIT',
+      platforms=["any"],
       classifiers=[
           'Development Status :: 5 - Production/Stable',
           'License :: OSI Approved :: MIT License',

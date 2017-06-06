@@ -69,6 +69,13 @@ every BSD, Linux and Mac OS.
 Changelog
 ---------
 
+v0.3.3 (2017-05-03)
+^^^^^^^^^^^^^^^^^^^
+* Disable PEP-489 on PyPy3
+* Disable PyModule_GetState on PyPy3
+* Provide a Debian package
+
+
 v0.3.2 (2017-05-03)
 ^^^^^^^^^^^^^^^^^^^
 * Support point-to-point veth pairs (See #6)

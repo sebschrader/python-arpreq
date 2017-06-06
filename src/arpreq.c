@@ -29,7 +29,7 @@ struct arpreq_state {
     int socket;
 };
 
-#ifdef IS_PY3
+#if defined(IS_PY3) && !defined(PYPY_VERSION_NUM)
 #define GETSTATE(m) ((struct arpreq_state*)PyModule_GetState(m))
 #else
 #define GETSTATE(m) (&_state)

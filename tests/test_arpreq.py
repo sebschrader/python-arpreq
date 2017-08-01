@@ -69,7 +69,7 @@ def ping(address):
             pass
 
 
-def get_default_gateway():
+def get_gateways():
     with open("/proc/net/route") as f:
         next(f)
         for line in f:
@@ -78,9 +78,9 @@ def get_default_gateway():
             mask = decode_address(fields[7])
             gateway = decode_address(fields[2])
             flags = decode_flags(fields[3])
-            if destination == '0.0.0.0' and mask == '0.0.0.0' and flags & 0x2:
-                return gateway
-    return None
+            # Check if RTF_UP and RTF_GATEWAY flag are set
+            if flags & 0x3 == 0x3:
+                yield gateway
 
 
 def get_arp_cache():
@@ -97,12 +97,10 @@ def test_cached_entries():
         assert arpreq(ip) == mac
 
 
-def test_default_gateway():
-    gateway = get_default_gateway()
-    if not gateway:
+def test_gateways():
+    for gateway in get_gateways():
         ping(gateway)
-        pytest.skip("No default gateway present.")
-    assert arpreq(gateway) is not None
+        assert arpreq(gateway) is not None
 
 
 @pytest.mark.parametrize("value", [

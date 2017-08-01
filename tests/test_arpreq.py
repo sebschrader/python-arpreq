@@ -1,5 +1,6 @@
+import errno
 import sys
-from socket import htonl, inet_ntoa
+import socket
 from struct import pack
 
 import ipaddress
@@ -30,11 +31,42 @@ def test_localhost(value):
 
 
 def decode_address(value):
-    return inet_ntoa(pack(">I", htonl(int(value, base=16))))
+    return socket.inet_ntoa(pack(">I", socket.htonl(int(value, base=16))))
 
 
 def decode_flags(value):
     return int(value, base=16)
+
+
+def icmp_socket():
+    try:
+        return socket.socket(socket.AF_INET, socket.SOCK_DGRAM,
+                             socket.IPPROTO_ICMP)
+    except IOError as e:
+        if e.errno != errno.EACCES:
+            raise
+        pytest.skip("Can't use unprivileged ICMP. Allow with sysctl "
+                    "net.ipv4.ping_group_range='0 2147483647'")
+
+
+def ping(address):
+    with icmp_socket() as sock:
+        sock.connect((address, 0))
+        sock.settimeout(1)
+        request = pack(
+            '>BBHHH32s',
+            8, # ICMP Type 8 (ECHO Request)
+            0, # Sub-Code 0
+            0, # Checksum,
+            0, # Identifier
+            0, # Sequence No
+            b'\x00' * 32 # Payload
+        )
+        sock.send(request)
+        try:
+            reply = sock.recv(65536)
+        except socket.timeout:
+            pass
 
 
 def get_default_gateway():
@@ -68,6 +100,7 @@ def test_cached_entries():
 def test_default_gateway():
     gateway = get_default_gateway()
     if not gateway:
+        ping(gateway)
         pytest.skip("No default gateway present.")
     assert arpreq(gateway) is not None
 

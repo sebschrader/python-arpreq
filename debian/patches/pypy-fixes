@@ -1,6 +1,17 @@
+From: Sebastian Schrader <sebastian.schrader@agdsn.de>
+Date: Sat, 5 Aug 2017 03:42:39 +0000
+Subject: pypy-fixes
+
+---
+ setup.py             |  3 ---
+ tests/test_arpreq.py | 15 ++++++++++++---
+ 2 files changed, 12 insertions(+), 6 deletions(-)
+
+diff --git a/setup.py b/setup.py
+index 1dc5725..209f115 100644
 --- a/setup.py
 +++ b/setup.py
-@@ -43,9 +43,6 @@
+@@ -43,9 +43,6 @@ setup(name='arpreq',
        long_description=readme,
        package_dir={'': 'src'},
        packages=find_packages(exclude=['tests']),
@@ -10,12 +21,15 @@
        tests_require=tests_require,
        ext_modules=[arpreq],
        license='MIT',
+diff --git a/tests/test_arpreq.py b/tests/test_arpreq.py
+index 5bf8a7a..a0251ee 100644
 --- a/tests/test_arpreq.py
 +++ b/tests/test_arpreq.py
-@@ -1,9 +1,9 @@
+@@ -1,10 +1,10 @@
+ import errno
 +import platform
  import sys
- from socket import htonl, inet_ntoa
+ import socket
  from struct import pack
  
  import ipaddress
@@ -23,7 +37,7 @@
  import pytest
  
  from arpreq import arpreq
-@@ -12,17 +12,26 @@
+@@ -13,17 +13,26 @@ localhost_values = [
      0x7F000001,
      b'127.0.0.1',
      u'127.0.0.1',

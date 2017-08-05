@@ -30,4 +30,5 @@ var/
 *.egg
 
 /.cache
+/.pc
 /.pybuild

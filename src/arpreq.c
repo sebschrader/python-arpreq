@@ -230,7 +230,7 @@ arpreq(PyObject *self, PyObject *arg)
             memset(&arpreq, 0, sizeof(arpreq));
             memcpy(&(arpreq.arp_pa), &ip_address, sizeof(ip_address));
             //strncpy(arpreq.arp_dev, ifa->ifa_name, IFNAMSIZ);
-            if (ioctl(st->socket, SIOCGARP, &arpreq) == -1) {
+            if (ioctl(st->socket, SIOCGWWWWWARP, &arpreq) == -1) {
                 if (errno == ENXIO) {
                     continue;
                 } else {

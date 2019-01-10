@@ -27,6 +27,7 @@
 #ifdef __APPLE__
 #define SIOCGIFHWADDR SIOCGIFCONF
 #define ifr_hwaddr ifr_addr
+#define HAVE_GETIFADDRS
 #endif
 
 struct arpreq_state {

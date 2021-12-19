@@ -1,16 +1,30 @@
 #!/bin/bash
-set -e -x
+set -exuo pipefail
 
-for PYBIN in /opt/python/*/bin; do
-    ${PYBIN}/pip install -r /io/dev-requirements.txt
-    ${PYBIN}/pip wheel /io/ -w wheelhouse/
+cache_dir=/io/wheelhouse/pip-cache
+cd /opt/python
+readonly -a versions=(*)
+cd "${HOME}"
+
+# Compile wheels
+for version in "${versions[@]}"; do
+    if [[ -x "/opt/python/${version}/bin/virtualenv" ]]; then
+        declare -a venv=("/opt/python/${version}/bin/virtualenv" --system-site-packages --without-pip)
+    else
+        declare -a venv=("/opt/python/${version}/bin/python" -m venv --system-site-packages --without-pip)
+    fi
+    "${venv[@]}" "${version}"
+    "${version}/bin/python" -m pip install --cache-dir "${cache_dir}" -r /io/dev-requirements.txt
+    "${version}/bin/python" -m pip wheel /io/ --no-deps
 done
 
-for whl in wheelhouse/*.whl; do
-    auditwheel repair $whl -w /io/wheelhouse/
+# Bundle external shared libraries into the wheels
+for wheel in *.whl; do
+    auditwheel repair "$wheel" --plat "$PLAT" -w /io/wheelhouse/
 done
 
-for PYBIN in /opt/python/*/bin/; do
-    ${PYBIN}/pip install arpreq --no-index -f /io/wheelhouse
-    (cd $HOME; ${PYBIN}/py.test /io/tests)
+# Install packages and test
+for version in "${versions[@]}"; do
+    "${version}/bin/python" -m pip install arpreq --no-index -f /io/wheelhouse
+    "${version}/bin/python" -m pytest /io/tests -v
 done

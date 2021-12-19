@@ -85,6 +85,7 @@ address_from_bytes(PyObject *bytes, struct in_addr *address)
 {
     const char *ascii_string = PyBytes_AS_STRING(bytes);
     if (inet_pton(AF_INET, ascii_string, address) != 1) {
+        errno = 0;
         PyErr_Format(PyExc_ValueError, "Invalid IPv4 address: %s", ascii_string);
         return -1;
     }
@@ -226,6 +227,8 @@ arpreq(PyObject *self, PyObject *arg)
             strncpy(arpreq.arp_dev, ifa->ifa_name, IFNAMSIZ);
             if (ioctl(st->socket, SIOCGARP, &arpreq) == -1) {
                 if (errno == ENXIO) {
+                    // No entry found in Kernel's ARP cache
+                    errno = 0;
                     continue;
                 } else {
                     error = true;

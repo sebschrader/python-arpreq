@@ -1,0 +1,13 @@
+---
+version: '3.4'
+
+services:
+  manylinux:
+    image: "quay.io/pypa/${PLAT}"
+    entrypoint: /io/docker/entrypoint.pl
+    environment:
+      PLAT: "${PLAT}"
+    volumes:
+      - ".:/io"
+    sysctls:
+      net.ipv4.ping_group_range: "0 2147483647"

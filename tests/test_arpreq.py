@@ -4,6 +4,7 @@ import socket
 from struct import pack
 
 import pytest
+import _pytest.outcomes
 
 from arpreq import arpreq
 
@@ -107,6 +108,15 @@ def get_gateways():
                 yield gateway
 
 
+@pytest.fixture(scope="session")
+def gateways():
+    """Sends an ICMP Echo-Request to all gateways to fill ARP cache"""
+    ips = set(get_gateways())
+    for ip in ips:
+        ping(ip)
+    return ips
+
+
 def get_arp_cache():
     """Get all complete ARP entries"""
     with open("/proc/net/arp") as f:
@@ -119,14 +129,23 @@ def get_arp_cache():
                 yield ip_address, hw_address
 
 
-def test_cached_entries():
-    for ip, mac in get_arp_cache():
+@pytest.fixture(scope="session")
+def arp_cache(request):
+    # Request gateways during runtime to handle if skipped
+    try:
+        request.getfixturevalue("gateways")
+    except _pytest.outcomes.Skipped:
+        pass
+    return tuple(get_arp_cache())
+
+
+def test_cached_entries(arp_cache):
+    for ip, mac in arp_cache:
         assert arpreq(ip) == mac
 
 
-def test_gateways():
-    for gateway in get_gateways():
-        ping(gateway)
+def test_gateways(gateways):
+    for gateway in gateways:
         assert arpreq(gateway) is not None
 
 

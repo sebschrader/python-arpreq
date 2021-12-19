@@ -86,10 +86,7 @@ def ping(address):
             b'\x00' * 32 # Payload
         )
         sock.send(request)
-        try:
-            reply = sock.recv(65536)
-        except socket.timeout:
-            pass
+        reply = sock.recv(65536)
 
 
 def get_gateways():
@@ -113,7 +110,10 @@ def gateways():
     """Sends an ICMP Echo-Request to all gateways to fill ARP cache"""
     ips = set(get_gateways())
     for ip in ips:
-        ping(ip)
+        try:
+            ping(ip)
+        except socket.timeout:
+            pass
     return ips
 
 

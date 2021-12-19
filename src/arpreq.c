@@ -20,8 +20,12 @@
 #  define IS_PY3
 #endif
 
-#if (PY_VERSION_HEX >= 0x3050000) && !defined(PYPY_VERSION_NUM)
-#  define HAVE_PEP489
+#if PY_VERSION_HEX >= 0x3050000
+#  if defined(PYPY_VERSION_NUM) && PYPY_VERSION_NUM >= 0x050800
+#    define HAVE_PEP489
+#  elif !defined(PYPY_VERSION_NUM)
+#    define HAVE_PEP489
+#  endif
 #endif
 
 struct arpreq_state {

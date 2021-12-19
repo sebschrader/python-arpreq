@@ -361,6 +361,7 @@ arpreq_free(void *m)
     struct arpreq_state *st = GETSTATE(m);
     if (st->socket >= 0) {
         close(st->socket);
+        st->socket = -1;
     }
 }
 

@@ -14,12 +14,10 @@ Build-Depends: debhelper (>= 9),
  python-ipaddress,
  python-netaddr,
  python-pytest,
- python-pytest-runner,
  python-setuptools,
  python3-all-dev,
  python3-netaddr,
  python3-pytest,
- python3-pytest-runner,
  python3-setuptools,
 Standards-Version: 3.9.8
 X-Python-Version: >= 2.6

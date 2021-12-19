@@ -33,9 +33,6 @@ setup(name='arpreq',
       long_description=readme,
       package_dir={'': 'src'},
       packages=find_packages(exclude=['tests']),
-      setup_requires=[
-          'pytest-runner'
-      ],
       ext_modules=[arpreq],
       license='MIT',
       platforms=["any"],

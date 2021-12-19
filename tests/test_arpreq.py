@@ -92,7 +92,9 @@ def ping(address):
 
 
 def get_gateways():
+    """Get all gateways of routes"""
     with open("/proc/net/route") as f:
+        # Skip header
         next(f)
         for line in f:
             fields = line.strip().split()
@@ -100,16 +102,19 @@ def get_gateways():
             mask = decode_address(fields[7])
             gateway = decode_address(fields[2])
             flags = decode_flags(fields[3])
-            # Check if RTF_UP and RTF_GATEWAY flag are set
+            # Check if RTF_UP and RTF_GATEWAY flags are set
             if flags & 0x3 == 0x3:
                 yield gateway
 
 
 def get_arp_cache():
+    """Get all complete ARP entries"""
     with open("/proc/net/arp") as f:
+        # Skip header
         next(f)
         for line in f:
             ip_address, hw_type, flags, hw_address, mask, device = line.split()
+            # Check if ATF_COM flag is set
             if decode_flags(flags) & 0x2:
                 yield ip_address, hw_address
 

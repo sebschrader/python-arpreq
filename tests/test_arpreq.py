@@ -1,3 +1,4 @@
+import contextlib
 import errno
 import sys
 import socket
@@ -73,7 +74,7 @@ def icmp_socket():
 
 
 def ping(address):
-    with icmp_socket() as sock:
+    with contextlib.closing(icmp_socket()) as sock:
         sock.connect((address, 0))
         sock.settimeout(1)
         request = pack(

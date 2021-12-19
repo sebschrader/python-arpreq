@@ -3,29 +3,51 @@ import sys
 import socket
 from struct import pack
 
-import ipaddress
-import netaddr
 import pytest
 
 from arpreq import arpreq
 
-localhost_values = [
-    0x7F000001,
-    b'127.0.0.1',
-    u'127.0.0.1',
-    netaddr.IPAddress('127.0.0.1'),
-    ipaddress.IPv4Address(u'127.0.0.1'),
-]
+localhost = {
+    "int": 0x7F000001,
+    "bytes": b"127.0.0.1",
+    "unicode": u"127.0.0.1",
+}
 
-if sys.version_info < (3,):
+try:
+    localhost["long"] = long(0x7F000001)
+except NameError as e:
+    localhost["long"] = pytest.param(None, marks=[pytest.mark.skip(str(e))])
+
+try:
+    import ipaddress
+except ImportError as e:
+    localhost["ipaddress"] = pytest.param(
+        None,
+        marks=[pytest.mark.skip(str(e))],
+    )
+else:
+    localhost["ipaddress"] = ipaddress.IPv4Address(u"127.0.0.1")
+
+try:
     import ipaddr
-    localhost_values.extend([
-        long(0x7F000001),
-        ipaddr.IPv4Address('127.0.0.1'),
-    ])
+except ImportError as e:
+    localhost["ipaddr"] = pytest.param(None, marks=[pytest.mark.skip(str(e))])
+else:
+    localhost["ipaddr"] = ipaddr.IPv4Address("127.0.0.1")
+
+try:
+    import netaddr
+except ImportError as e:
+    localhost["netaddr"] = pytest.param(None, marks=[pytest.mark.skip(str(e))])
+else:
+    localhost["netaddr"] = netaddr.IPAddress("127.0.0.1")
 
 
-@pytest.mark.parametrize("value", localhost_values)
+@pytest.mark.parametrize(
+    "value",
+    localhost.values(),
+    ids=tuple(localhost.keys()),
+)
 def test_localhost(value):
     assert arpreq(value) == '00:00:00:00:00:00'
 

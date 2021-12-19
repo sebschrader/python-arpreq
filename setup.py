@@ -19,16 +19,6 @@ arpreq = Extension('arpreq', sources=['src/arpreq.c'],
                    extra_compile_args=['-std=c99'],
                    define_macros=define_macros)
 
-python_major_version = platform.python_version_tuple()[0]
-
-
-tests_require = [
-        'pytest',
-        'netaddr'
-]
-if python_major_version == '2':
-    tests_require.append('ipaddr')
-    tests_require.append('ipaddress')
 
 with open('README.rst') as f:
     readme = f.read()
@@ -46,7 +36,6 @@ setup(name='arpreq',
       setup_requires=[
           'pytest-runner'
       ],
-      tests_require=tests_require,
       ext_modules=[arpreq],
       license='MIT',
       platforms=["any"],

@@ -116,12 +116,20 @@ specific addresses can be queried.
 Changelog
 ---------
 
+v0.3.4 (2021-12-21)
+^^^^^^^^^^^^^^^^^^^
+* Enable PEP-489 on PyPy3 5.8 and later
+* Improve testing
+* Move Debian packaging to separate branches
+* Add docker-compose infrastructure for different manylinux variants
+* Add ``arpreqb`` function, which returns the MAC as Python ``bytes`` object
+* Support 8-byte/64-bit MAC addresses
+
 v0.3.3 (2017-05-03)
 ^^^^^^^^^^^^^^^^^^^
 * Disable PEP-489 on PyPy3
 * Disable PyModule_GetState on PyPy3
 * Provide a Debian package
-
 
 v0.3.2 (2017-05-03)
 ^^^^^^^^^^^^^^^^^^^

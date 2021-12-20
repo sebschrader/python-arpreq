@@ -166,7 +166,9 @@ PyDoc_STRVAR(arpreq_arpreq_doc,
 "\n"
 "Probe the kernel ARP cache for the MAC address of an IPv4 address.\n"
 "The IPv4 address may be a str, int, ipaddr.IPv4Address,\n"
-"ipaddress.IPv4Address or netaddr.IPAddress object.\n"
+"ipaddress.IPv4Address or netaddr.IPAddress object. If the IPv4 address is\n"
+"equal to an IPv4 address of an interface, the hardware address of the\n"
+"interface is returned.\n"
 "\n"
 "Note: No actual ARP request is performed, only the kernel cache is queried."
 );

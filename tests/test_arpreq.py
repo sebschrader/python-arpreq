@@ -160,20 +160,34 @@ def test_gateways(gateways):
         assert mac_pattern.match(arpreq(gateway))
 
 
+illegal_values = {
+    "garbage_bytes": b"Foobar",
+    "negative_int": -1,
+    "uint32_overflow": 1 << 32,
+    "uint64_overflow": 1 << 64,
+    "garbage_unicode": u"\u201c\ufffd\u201d",
+}
 
-@pytest.mark.parametrize("value", [
-    "Foobar",
-    -1,
-    1 << 32,
-    1 << 64,
-    u"\u201c\ufffd\u201d"
-])
+
+@pytest.mark.parametrize(
+    "value", illegal_values.values(), ids=tuple(illegal_values.keys())
+)
 def test_illegal_argument(value):
     with pytest.raises(ValueError):
         arpreq(value)
 
 
-@pytest.mark.parametrize("value", [None, object(), [], ()])
+illegal_types = {
+    "None": None,
+    "object": object(),
+    "list": [],
+    "tuple": (),
+}
+
+
+@pytest.mark.parametrize(
+    "value", illegal_types.values(), ids=tuple(illegal_types.keys())
+)
 def test_illegal_type(value):
     with pytest.raises(TypeError):
         arpreq(value)

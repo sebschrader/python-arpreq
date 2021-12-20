@@ -1,9 +1,0 @@
-/tmp
-/pypy-arpreq
-/python-arpreq
-/python3-arpreq
-/.debhelper
-/debhelper-build-stamp
-/files
-/*.log
-/*.substvars

@@ -170,6 +170,9 @@ PyDoc_STRVAR(arpreq_arpreq_doc,
 "equal to an IPv4 address of an interface, the hardware address of the\n"
 "interface is returned.\n"
 "\n"
+"Returns a hexadecimal string representation of the MAC address, with the\n"
+"bytes separated by colons (e.g. 00:11:22:33:44:55).\n"
+"\n"
 "Note: No actual ARP request is performed, only the kernel cache is queried."
 );
 

@@ -63,32 +63,35 @@ def decode_flags(value):
     return int(value, base=16)
 
 
+@pytest.fixture(scope="session")
 def icmp_socket():
     try:
-        return socket.socket(socket.AF_INET, socket.SOCK_DGRAM,
-                             socket.IPPROTO_ICMP)
+        sock = socket.socket(
+            socket.AF_INET, socket.SOCK_DGRAM, socket.IPPROTO_ICMP
+        )
     except IOError as e:
         if e.errno != errno.EACCES:
             raise
         pytest.skip("Can't use unprivileged ICMP. Allow with sysctl "
                     "net.ipv4.ping_group_range='0 2147483647'")
+    with contextlib.closing(sock):
+        yield sock
 
 
-def ping(address):
-    with contextlib.closing(icmp_socket()) as sock:
-        sock.connect((address, 0))
-        sock.settimeout(1)
-        request = pack(
-            '>BBHHH32s',
-            8, # ICMP Type 8 (ECHO Request)
-            0, # Sub-Code 0
-            0, # Checksum,
-            0, # Identifier
-            0, # Sequence No
-            b'\x00' * 32 # Payload
-        )
-        sock.send(request)
-        reply = sock.recv(65536)
+def ping(sock, address):
+    sock.connect((address, 0))
+    sock.settimeout(1)
+    request = pack(
+        ">BBHHH32s",
+        8, # ICMP Type 8 (ECHO Request)
+        0, # Sub-Code 0
+        0, # Checksum,
+        0, # Identifier
+        0, # Sequence No
+        b"\x00" * 32, # Payload
+    )
+    sock.send(request)
+    reply = sock.recv(65536)
 
 
 def get_gateways():
@@ -108,12 +111,12 @@ def get_gateways():
 
 
 @pytest.fixture(scope="session")
-def gateways():
+def gateways(icmp_socket):
     """Sends an ICMP Echo-Request to all gateways to fill ARP cache"""
     ips = set(get_gateways())
     for ip in ips:
         try:
-            ping(ip)
+            ping(icmp_socket, ip)
         except socket.timeout:
             pass
     return ips

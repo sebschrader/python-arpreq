@@ -1,3 +1,4 @@
+import binascii
 import contextlib
 import errno
 import re
@@ -8,7 +9,7 @@ from struct import pack
 import pytest
 import _pytest.outcomes
 
-from arpreq import arpreq
+from arpreq import arpreq, arpreqb
 
 localhost = {
     "int": 0x7F000001,
@@ -51,11 +52,24 @@ else:
     localhost.values(),
     ids=tuple(localhost.keys()),
 )
-def test_localhost(value):
+def test_localhost_bytes(value):
+    assert arpreqb(value) == b"\x00\x00\x00\x00\x00\x00"
+
+
+@pytest.mark.parametrize(
+    "value",
+    localhost.values(),
+    ids=tuple(localhost.keys()),
+)
+def test_localhost_string(value):
     assert arpreq(value) == '00:00:00:00:00:00'
 
 
-def decode_address(value):
+def encode_mac_address(value):
+    return binascii.unhexlify(value.replace(":", ""))
+
+
+def decode_ip_address(value):
     return socket.inet_ntoa(pack(">I", socket.htonl(int(value, base=16))))
 
 
@@ -101,9 +115,9 @@ def get_gateways():
         next(f)
         for line in f:
             fields = line.strip().split()
-            destination = decode_address(fields[1])
-            mask = decode_address(fields[7])
-            gateway = decode_address(fields[2])
+            destination = decode_ip_address(fields[1])
+            mask = decode_ip_address(fields[7])
+            gateway = decode_ip_address(fields[2])
             flags = decode_flags(fields[3])
             # Check if RTF_UP and RTF_GATEWAY flags are set
             if flags & 0x3 == 0x3:
@@ -144,9 +158,20 @@ def arp_cache(request):
     return tuple(get_arp_cache())
 
 
-def test_cached_entries(arp_cache):
+def test_cached_entries_bytes(arp_cache):
+    for ip, mac in arp_cache:
+        assert arpreqb(ip) == encode_mac_address(mac)
+
+
+def test_cached_entries_string(arp_cache):
     for ip, mac in arp_cache:
         assert arpreq(ip) == mac
+
+
+def test_gateways_bytes(gateways):
+    for gateway in gateways:
+        mac = arpreqb(gateway)
+        assert isinstance(mac, bytes) and len(mac) == 6
 
 
 mac_pattern = re.compile(
@@ -155,7 +180,7 @@ mac_pattern = re.compile(
 )
 
 
-def test_gateways(gateways):
+def test_gateways_string(gateways):
     for gateway in gateways:
         assert mac_pattern.match(arpreq(gateway))
 

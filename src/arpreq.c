@@ -41,6 +41,19 @@ static struct arpreq_state _state;
 #endif
 
 /**
+ * Convert a binary MAC address into a Python bytes object.
+ */
+static inline PyObject *
+mac_to_bytes(const unsigned char *eap)
+{
+#ifdef IS_PY3
+    return PyBytes_FromStringAndSize((const char *)eap, IFHWADDRLEN);
+#else
+    return PyString_FromStringAndSize((const char *)eap, IFHWADDRLEN);
+#endif
+}
+
+/**
  * Convert a binary MAC address into a lowercase Python str object.
  */
 static inline PyObject *
@@ -161,49 +174,20 @@ coerce_argument(PyObject *self, PyObject *object, struct in_addr *address)
     return -1;
 }
 
-PyDoc_STRVAR(arpreq_arpreq_doc,
-"arpreq(ipv4_address) -> mac\n"
-"\n"
-"Probe the kernel ARP cache for the MAC address of an IPv4 address.\n"
-"The IPv4 address may be a str, int, ipaddr.IPv4Address,\n"
-"ipaddress.IPv4Address or netaddr.IPAddress object. If the IPv4 address is\n"
-"equal to an IPv4 address of an interface, the hardware address of the\n"
-"interface is returned.\n"
-"\n"
-"Returns a hexadecimal string representation of the MAC address, with the\n"
-"bytes separated by colons (e.g. 00:11:22:33:44:55).\n"
-"\n"
-"Note: No actual ARP request is performed, only the kernel cache is queried."
-);
-
 /**
  * Probe the Kernel ARP cache by issuing a SIOCGARP ioctl call.
  *
  * See arp(7) for details.
  */
-static PyObject *
-arpreq(PyObject *self, PyObject *arg)
+static int
+do_arpreq(int sock, struct sockaddr_in *ip_address, struct sockaddr *mac_address)
 {
-    struct arpreq_state *st = GETSTATE(self);
-
-    struct sockaddr_in ip_address;
-    memset(&ip_address, 0, sizeof(ip_address));
-    ip_address.sin_family = AF_INET;
-    if (coerce_argument(self, arg, &(ip_address.sin_addr)) == -1) {
-        return NULL;
-    }
-
-    uint32_t addr = ip_address.sin_addr.s_addr;
-    bool error = false;
-    bool found = false;
-    struct sockaddr mac_address;
-    memset(&mac_address, 0, sizeof(mac_address));
+    uint32_t addr = ip_address->sin_addr.s_addr;
     struct ifaddrs *head_ifa = NULL;
-
-    Py_BEGIN_ALLOW_THREADS
+    int result = 0;
 
     if (getifaddrs(&head_ifa) == -1) {
-        error = true;
+        result = -1;
         goto cleanup;
     }
 
@@ -222,43 +206,130 @@ arpreq(PyObject *self, PyObject *arg)
             if (ifaddr == addr) {
                 struct ifreq ifreq;
                 strncpy(ifreq.ifr_name, ifa->ifa_name, IFNAMSIZ);
-                if (ioctl(st->socket, SIOCGIFHWADDR, &ifreq) == -1) {
-                    error = true;
+                if (ioctl(sock, SIOCGIFHWADDR, &ifreq) == -1) {
+                    result = -1;
                 } else {
-                    memcpy(&mac_address, &ifreq.ifr_hwaddr, sizeof(mac_address));
-                    found = true;
+                    memcpy(mac_address, &ifreq.ifr_hwaddr, sizeof(*mac_address));
+                    result = 1;
                 }
                 break;
             }
             struct arpreq arpreq;
             memset(&arpreq, 0, sizeof(arpreq));
-            memcpy(&(arpreq.arp_pa), &ip_address, sizeof(ip_address));
+            memcpy(&(arpreq.arp_pa), ip_address, sizeof(*ip_address));
             strncpy(arpreq.arp_dev, ifa->ifa_name, IFNAMSIZ);
-            if (ioctl(st->socket, SIOCGARP, &arpreq) == -1) {
+            if (ioctl(sock, SIOCGARP, &arpreq) == -1) {
                 if (errno == ENXIO) {
                     // No entry found in Kernel's ARP cache
                     errno = 0;
                     continue;
                 } else {
-                    error = true;
+                    result = -1;
                     break;
                 }
             }
             if (arpreq.arp_flags & ATF_COM) {
-                memcpy(&mac_address, &arpreq.arp_ha, sizeof(mac_address));
-                found = true;
+                memcpy(mac_address, &arpreq.arp_ha, sizeof(*mac_address));
+                result = 1;
                 break;
             }
         }
     }
+
 cleanup:
     freeifaddrs(head_ifa);
+    return result;
+}
+
+PyDoc_STRVAR(arpreq_arpreq_doc,
+"arpreq(ipv4_address) -> mac\n"
+"\n"
+"Probe the kernel ARP cache for the MAC address of an IPv4 address.\n"
+"The IPv4 address may be a str, int, ipaddr.IPv4Address,\n"
+"ipaddress.IPv4Address or netaddr.IPAddress object. If the IPv4 address is\n"
+"equal to an IPv4 address of an interface, the hardware address of the\n"
+"interface is returned.\n"
+"\n"
+"Returns a hexadecimal string representation of the MAC address, with the\n"
+"bytes separated by colons (e.g. 00:11:22:33:44:55). Use arpreqb to return\n"
+"the binary representation.\n"
+"\n"
+"Note: No actual ARP request is performed, only the kernel cache is queried."
+);
+
+/**
+ * Perform arpreq and return string result
+ */
+static PyObject *
+arpreq(PyObject *self, PyObject *arg)
+{
+    struct arpreq_state *st = GETSTATE(self);
+    struct sockaddr_in ip_address;
+    struct sockaddr mac_address;
+    int result;
+
+    memset(&ip_address, 0, sizeof(ip_address));
+    memset(&mac_address, 0, sizeof(mac_address));
+    ip_address.sin_family = AF_INET;
+    if (coerce_argument(self, arg, &(ip_address.sin_addr)) == -1) {
+        return NULL;
+    }
+
+    Py_BEGIN_ALLOW_THREADS
+    result = do_arpreq(st->socket, &ip_address, &mac_address);
     Py_END_ALLOW_THREADS
-    if (error) {
+
+    if (result < 0) {
         return PyErr_SetFromErrno(PyExc_OSError);
     }
-    if (found) {
+    if (result > 0) {
         return mac_to_string((unsigned char *)mac_address.sa_data);
+    }
+    Py_RETURN_NONE;
+}
+
+PyDoc_STRVAR(arpreq_arpreqb_doc,
+"arpreqb(ipv4_address) -> mac\n"
+"\n"
+"Probe the kernel ARP cache for the MAC address of an IPv4 address.\n"
+"The IPv4 address may be a str, int, ipaddr.IPv4Address,\n"
+"ipaddress.IPv4Address or netaddr.IPAddress object. If the IPv4 address is\n"
+"equal to an IPv4 address of an interface, the hardware address of the\n"
+"interface is returned.\n"
+"\n"
+"Returns the binary representation of the MAC address. Use arpreq to return\n"
+"a string representation.\n"
+"\n"
+"Note: No actual ARP request is performed, only the kernel cache is queried."
+);
+
+/**
+ * Perform arpreq and return bytes result
+ */
+static PyObject *
+arpreqb(PyObject *self, PyObject *arg)
+{
+    struct arpreq_state *st = GETSTATE(self);
+    struct sockaddr_in ip_address;
+    struct sockaddr mac_address;
+    int result;
+
+    memset(&ip_address, 0, sizeof(ip_address));
+    memset(&mac_address, 0, sizeof(mac_address));
+    ip_address.sin_family = AF_INET;
+    if (coerce_argument(self, arg, &(ip_address.sin_addr)) == -1) {
+        return NULL;
+    }
+
+    Py_BEGIN_ALLOW_THREADS
+    result = do_arpreq(st->socket, &ip_address, &mac_address);
+    Py_END_ALLOW_THREADS
+
+    if (result < 0) {
+        return PyErr_SetFromErrno(PyExc_OSError);
+    }
+    if (result > 0) {
+        return mac_to_bytes((unsigned char *)mac_address.sa_data);
     }
     Py_RETURN_NONE;
 }
@@ -297,6 +368,7 @@ PyDoc_STRVAR(arpreq_doc,
 
 static PyMethodDef arpreq_methods[] = {
     {"arpreq", arpreq, METH_O, arpreq_arpreq_doc},
+    {"arpreqb", arpreqb, METH_O, arpreq_arpreqb_doc},
     {NULL, NULL, 0, NULL}
 };
 

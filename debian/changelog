@@ -1,3 +1,9 @@
+arpreq (0.3.4-1) unstable; urgency=medium
+
+  * New upstream release
+
+ -- Sebastian Schrader <sebastian.schrader@agdsn.de>  Mon, 20 Dec 2021 13:25:23 +0000
+
 arpreq (0.3.3-1) unstable; urgency=medium
 
   * Initial package release

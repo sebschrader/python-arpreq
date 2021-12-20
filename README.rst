@@ -64,7 +64,8 @@ Supported Platforms
 
 This extension has only been tested on Linux, it should however work on
 any platform that supports the ``SIOCGARP`` ioctl, which is virtually
-every BSD, Linux and Mac OS.
+every BSD, Linux. MacOS X does not work anymore, because Apple has
+removed the interface.
 
 Changelog
 ---------

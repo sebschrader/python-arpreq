@@ -1,5 +1,6 @@
 import contextlib
 import errno
+import re
 import sys
 import socket
 from struct import pack
@@ -145,9 +146,16 @@ def test_cached_entries(arp_cache):
         assert arpreq(ip) == mac
 
 
+mac_pattern = re.compile(
+    r"\A([0-9a-f]{2}):([0-9-af]{2}):([0-9a-f]{2}):"
+    r"([0-9a-f]{2}):([0-9a-f]{2}):([0-9a-f]{2})\Z"
+)
+
+
 def test_gateways(gateways):
     for gateway in gateways:
-        assert arpreq(gateway) is not None
+        assert mac_pattern.match(arpreq(gateway))
+
 
 
 @pytest.mark.parametrize("value", [

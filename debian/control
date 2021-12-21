@@ -2,13 +2,13 @@ Source: arpreq
 Section: python
 Priority: optional
 Maintainer: Sebastian Schrader <sebastian.schrader@agdsn.de>
-Build-Depends: debhelper (>= 12),
+Build-Depends: debhelper (>= 13),
  dh-python,
  python3-all-dev,
  python3-netaddr,
  python3-pytest,
  python3-setuptools,
-Standards-Version: 4.3.0
+Standards-Version: 4.5.1
 X-Python3-Version: >= 3.7
 Homepage: https://github.com/sebschrader/python-arpreq
 

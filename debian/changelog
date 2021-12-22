@@ -1,3 +1,11 @@
+arpreq (0.3.4-2) unstable; urgency=medium
+
+  * Disable Python 2 packaging
+  * Bump Debian standards conformance to 4.5.1
+  * Bump debhelper compat to 13
+
+ -- Sebastian Schrader <sebastian.schrader@agdsn.de>  Wed, 22 Dec 2021 14:00:40 +0000
+
 arpreq (0.3.4-1) unstable; urgency=medium
 
   * New upstream release

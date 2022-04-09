@@ -27,6 +27,12 @@ cache of the Kernel.
 An IP address can only be resolved to a MAC address if it is on the same
 subnet as your machine.
 
+Please note, that no ARP request packet is sent out by this module, only the
+cache is queried. If the IP address hasn't been communicated with recently,
+there may not be cache entry for it. You can refresh the cache, by trying to
+communicate with IP (e.g. by sending and ICMP Echo-Request aka ping) before
+probing the ARP cache.
+
 Let's assume your current machine has the address ``192.168.1.10`` and
 another machine with the address ``192.168.1.1`` is on the same subnet:
 

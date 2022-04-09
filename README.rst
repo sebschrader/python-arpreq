@@ -20,8 +20,9 @@ a given IP address.
 Usage
 -----
 
-The ``arpreq`` module exposes a single function ``arpreq``, that will
-resolve a given IPv4 address into a MAC address.
+The ``arpreq`` module exposes two functions ``arpreq`` and ``arpreqb``, that
+try to resolve a given IPv4 address into a MAC address by querying the ARP
+cache of the Kernel.
 
 An IP address can only be resolved to a MAC address if it is on the same
 subnet as your machine.
@@ -58,6 +59,16 @@ of the common ``ipaddr``, ``ipaddress``, or ``netaddr`` modules.
     >>> import ipaddress
     >>> arpreq.arpreq(ipaddress.IPv4Address(u'127.0.0.1'))
     '00:00:00:00:00:00'
+
+Instead of a hexadecimal string representation, MAC addresses may also be
+returned as native bytes when using the ``arpreqb`` function:
+
+.. code:: python
+
+    >>> arpreq.arpreqb('127.0.0.1')
+    b'\x00\x00\x00\x00\x00\x00'
+    >>> arpreq.arpreqb('192.168.1.1')
+    b'\x00\x11"3DU'
 
 Supported Platforms
 -------------------

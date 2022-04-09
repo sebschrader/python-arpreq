@@ -84,6 +84,35 @@ any platform that supports the ``SIOCGARP`` ioctl, which is virtually
 every BSD and Linux. MacOS X does not work anymore, because Apple has
 removed the interface.
 
+IPv6-Support and Alternatives
+-----------------------------
+
+The ``SIOCGARP`` ioctl interface described in `arp(7)`_ and used by this
+module is a fairly old mechanism and as the name suggests, works only for ARP
+and therefore only for IPv4. For IPv6 the Linux Kernel uses the modern and
+extensible `rtnetlink(7)`_ interface based on `netlink(7)`_ to manage
+link-layer neighbor information.
+
+Until Linux 5.0 however only whole tables could be dumped via `rtnetlink(7)`_
+``RTM_GETNEIGH`` messages and it was not possible to query for specific IP
+addresses. If entries need to be queried often or there are a lot of entries,
+this might be too inefficient. As an optimization querying the tables only
+once and subscribing to change events afterwards was possible, albeit more
+complicated. Since
+`Linux 5.0 <https://github.com/torvalds/linux/commit/24894bc6eabc43f55f5470767780ac07db18e797>`_
+``RTM_GETNEIGH`` messages can be used to query specific addresses on specific
+interfaces.
+
+The pure-python netlink implementation `pyroute2`_ can be used to access the
+`rtnetlink(7)`_ and other `netlink(7)`_ interfaces.
+`Since version 0.5.14 <https://github.com/svinota/pyroute2/commit/b1f2af00689e17a50eb09b1560acfd0dc96b1a7a>`_
+specific addresses can be queried.
+
+.. _arp(7): https://manpages.debian.org/stable/manpages/arp.7.en.html
+.. _netlink(7): https://manpages.debian.org/stable/manpages/netlink.7.en.html
+.. _rtnetlink(7): https://manpages.debian.org/stable/manpages/rtnetlink.7.en.html
+.. _pyroute2: https://pyroute2.org/
+
 Changelog
 ---------
 

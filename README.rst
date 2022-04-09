@@ -42,7 +42,7 @@ another machine with the address ``192.168.1.1`` is on the same subnet:
     >>> arpreq.arpreq('192.168.1.1')
     '00:11:22:33:44:55'
 
-If a IP address can not be resolved to an MAC address, None is returned.
+If an IP address can not be resolved to an MAC address, None is returned.
 
 .. code:: python
 
@@ -81,7 +81,7 @@ Supported Platforms
 
 This extension has only been tested on Linux, it should however work on
 any platform that supports the ``SIOCGARP`` ioctl, which is virtually
-every BSD, Linux. MacOS X does not work anymore, because Apple has
+every BSD and Linux. MacOS X does not work anymore, because Apple has
 removed the interface.
 
 Changelog

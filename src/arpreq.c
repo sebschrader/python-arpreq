@@ -15,6 +15,11 @@
 #include <netinet/in.h>
 #include <arpa/inet.h>
 #include <ifaddrs.h>
+#ifdef __linux__
+#include <linux/if_packet.h>
+#else
+#include <net/if_dl.h>
+#endif
 
 #if PY_MAJOR_VERSION >= 3
 #  define IS_PY3
@@ -40,16 +45,22 @@ struct arpreq_state {
 static struct arpreq_state _state;
 #endif
 
+struct mac {
+    uint16_t type;
+    uint8_t len;
+    uint8_t addr[8];
+};
+
 /**
  * Convert a binary MAC address into a Python bytes object.
  */
 static inline PyObject *
-mac_to_bytes(const unsigned char *eap)
+mac_to_bytes(const struct mac *mac)
 {
 #ifdef IS_PY3
-    return PyBytes_FromStringAndSize((const char *)eap, IFHWADDRLEN);
+    return PyBytes_FromStringAndSize((const char *)mac->addr, mac->len);
 #else
-    return PyString_FromStringAndSize((const char *)eap, IFHWADDRLEN);
+    return PyString_FromStringAndSize((const char *)mac->addr, mac->len);
 #endif
 }
 
@@ -57,15 +68,26 @@ mac_to_bytes(const unsigned char *eap)
  * Convert a binary MAC address into a lowercase Python str object.
  */
 static inline PyObject *
-mac_to_string(const unsigned char *eap)
+mac_to_string(const struct mac *mac)
 {
-    char buffer[18];
-    sprintf(buffer, "%02hhx:%02hhx:%02hhx:%02hhx:%02x:%02hhx",
-            eap[0], eap[1], eap[2], eap[3], eap[4], eap[5]);
+    static const char *chars = "0123456789abcdef";
+    char buffer[sizeof(mac->addr) * 3];
+    int end = mac->len * 3 - 1;
+
+    for (int i = 0; i < mac->len; i++) {
+        int j = i * 3;
+
+        buffer[j] = chars[mac->addr[i] >> 4 & 0x0FU];
+        buffer[j+1] = chars[mac->addr[i] & 0x0FU];
+        buffer[j+2] = ':';
+    }
+    // Better be safe than sorry
+    buffer[end] = '\0';
+
 #ifdef IS_PY3
-    return PyUnicode_DecodeASCII(buffer, sizeof(buffer) - 1, NULL);
+    return PyUnicode_DecodeASCII(buffer, end, NULL);
 #else
-    return PyString_FromStringAndSize(buffer, sizeof(buffer) - 1);
+    return PyString_FromStringAndSize(buffer, end);
 #endif
 }
 
@@ -174,13 +196,59 @@ coerce_argument(PyObject *self, PyObject *object, struct in_addr *address)
     return -1;
 }
 
+
+/**
+ * Get the MAC address of a given interface from the list of all interface
+ * addresses.
+ */
+static bool
+get_mac(struct ifaddrs *head, const char *name, struct mac *mac)
+{
+    for (struct ifaddrs *ifa = head; ifa != NULL; ifa = ifa->ifa_next)
+    {
+        if (ifa->ifa_addr == NULL)
+            continue;
+
+        if (strncmp(name, ifa->ifa_name, IFNAMSIZ) != 0)
+            continue;
+
+#ifdef __linux__
+        if (ifa->ifa_addr->sa_family != AF_PACKET)
+            continue;
+
+        struct sockaddr_ll *addr = (struct sockaddr_ll *)ifa->ifa_addr;
+
+        if (addr->sll_halen > sizeof(mac->addr))
+            continue;
+
+        mac->type = addr->sll_hatype;
+        mac->len = addr->sll_halen;
+        memcpy(mac->addr, addr->sll_addr, addr->sll_halen);
+#else
+        if (ifa->ifa_addr->sa_family != AF_LINK)
+            continue;
+
+        struct sockaddr_dl *addr = (struct sockaddr_dl *)ifa->ifa_addr;
+
+        if (addr->sdl_alen > sizeof(mac->addr))
+            continue;
+
+        mac->type = addr->sdl_type;
+        mac->len = addr->sdl_alen;
+        memcpy(mac->addr, LLADDR(addr), addr->sdl_alen);
+#endif
+        return true;
+    }
+    return false;
+}
+
 /**
  * Probe the Kernel ARP cache by issuing a SIOCGARP ioctl call.
  *
  * See arp(7) for details.
  */
 static int
-do_arpreq(int sock, struct sockaddr_in *ip, struct sockaddr *mac)
+do_arpreq(int sock, struct sockaddr_in *ip, struct mac *mac)
 {
     uint32_t addr = ip->sin_addr.s_addr;
     struct ifaddrs *head_ifa = NULL;
@@ -203,15 +271,12 @@ do_arpreq(int sock, struct sockaddr_in *ip, struct sockaddr *mac)
         uint32_t dstaddr = ((struct sockaddr_in *) ifa->ifa_dstaddr)->sin_addr.s_addr;
         if (((netmask == 0xFFFFFFFFU) && (addr == dstaddr))
                 || (ifaddr & netmask) == (addr & netmask)) {
+            // Get MAC of our interface
+            if (!get_mac(head_ifa, ifa->ifa_name, mac)) {
+                continue;
+            }
             if (ifaddr == addr) {
-                struct ifreq ifreq;
-                strncpy(ifreq.ifr_name, ifa->ifa_name, IFNAMSIZ);
-                if (ioctl(sock, SIOCGIFHWADDR, &ifreq) == -1) {
-                    result = -1;
-                } else {
-                    memcpy(mac, &ifreq.ifr_hwaddr, sizeof(*mac));
-                    result = 1;
-                }
+                result = 1;
                 break;
             }
             struct arpreq arpreq;
@@ -229,7 +294,7 @@ do_arpreq(int sock, struct sockaddr_in *ip, struct sockaddr *mac)
                 }
             }
             if (arpreq.arp_flags & ATF_COM) {
-                memcpy(mac, &arpreq.arp_ha, sizeof(*mac));
+                memcpy(mac->addr, &arpreq.arp_ha.sa_data, mac->len);
                 result = 1;
                 break;
             }
@@ -265,7 +330,7 @@ arpreq(PyObject *self, PyObject *arg)
 {
     struct arpreq_state *st = GETSTATE(self);
     struct sockaddr_in ip;
-    struct sockaddr mac;
+    struct mac mac;
     int result;
 
     memset(&ip, 0, sizeof(ip));
@@ -283,7 +348,7 @@ arpreq(PyObject *self, PyObject *arg)
         return PyErr_SetFromErrno(PyExc_OSError);
     }
     if (result > 0) {
-        return mac_to_string((unsigned char *)mac.sa_data);
+        return mac_to_string(&mac);
     }
     Py_RETURN_NONE;
 }
@@ -329,7 +394,7 @@ arpreqb(PyObject *self, PyObject *arg)
         return PyErr_SetFromErrno(PyExc_OSError);
     }
     if (result > 0) {
-        return mac_to_bytes((unsigned char *)mac.sa_data);
+        return mac_to_bytes(&mac);
     }
     Py_RETURN_NONE;
 }

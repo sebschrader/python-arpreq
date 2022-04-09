@@ -182,7 +182,7 @@ mac_pattern = re.compile(
 
 def test_gateways_string(gateways):
     for gateway in gateways:
-        assert mac_pattern.match(arpreq(gateway))
+        assert mac_pattern.match(arpreq(gateway)) is not None
 
 
 illegal_values = {

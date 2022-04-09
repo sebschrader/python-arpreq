@@ -33,13 +33,13 @@ there may not be cache entry for it. You can refresh the cache, by trying to
 communicate with IP (e.g. by sending and ICMP Echo-Request aka ping) before
 probing the ARP cache.
 
-Let's assume your current machine has the address ``192.168.1.10`` and
-another machine with the address ``192.168.1.1`` is on the same subnet:
+Let's assume your current machine has the address ``192.0.2.10`` and
+another machine with the address ``192.0.2.1`` is on the same subnet:
 
 .. code:: python
 
     >>> import arpreq
-    >>> arpreq.arpreq('192.168.1.1')
+    >>> arpreq.arpreq('192.0.2.1')
     '00:11:22:33:44:55'
 
 If an IP address can not be resolved to an MAC address, None is returned.
@@ -73,7 +73,7 @@ returned as native bytes when using the ``arpreqb`` function:
 
     >>> arpreq.arpreqb('127.0.0.1')
     b'\x00\x00\x00\x00\x00\x00'
-    >>> arpreq.arpreqb('192.168.1.1')
+    >>> arpreq.arpreqb('192.0.2.1')
     b'\x00\x11"3DU'
 
 Supported Platforms

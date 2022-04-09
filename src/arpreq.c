@@ -180,9 +180,9 @@ coerce_argument(PyObject *self, PyObject *object, struct in_addr *address)
  * See arp(7) for details.
  */
 static int
-do_arpreq(int sock, struct sockaddr_in *ip_address, struct sockaddr *mac_address)
+do_arpreq(int sock, struct sockaddr_in *ip, struct sockaddr *mac)
 {
-    uint32_t addr = ip_address->sin_addr.s_addr;
+    uint32_t addr = ip->sin_addr.s_addr;
     struct ifaddrs *head_ifa = NULL;
     int result = 0;
 
@@ -209,14 +209,14 @@ do_arpreq(int sock, struct sockaddr_in *ip_address, struct sockaddr *mac_address
                 if (ioctl(sock, SIOCGIFHWADDR, &ifreq) == -1) {
                     result = -1;
                 } else {
-                    memcpy(mac_address, &ifreq.ifr_hwaddr, sizeof(*mac_address));
+                    memcpy(mac, &ifreq.ifr_hwaddr, sizeof(*mac));
                     result = 1;
                 }
                 break;
             }
             struct arpreq arpreq;
             memset(&arpreq, 0, sizeof(arpreq));
-            memcpy(&(arpreq.arp_pa), ip_address, sizeof(*ip_address));
+            memcpy(&(arpreq.arp_pa), ip, sizeof(*ip));
             strncpy(arpreq.arp_dev, ifa->ifa_name, IFNAMSIZ);
             if (ioctl(sock, SIOCGARP, &arpreq) == -1) {
                 if (errno == ENXIO) {
@@ -229,7 +229,7 @@ do_arpreq(int sock, struct sockaddr_in *ip_address, struct sockaddr *mac_address
                 }
             }
             if (arpreq.arp_flags & ATF_COM) {
-                memcpy(mac_address, &arpreq.arp_ha, sizeof(*mac_address));
+                memcpy(mac, &arpreq.arp_ha, sizeof(*mac));
                 result = 1;
                 break;
             }
@@ -264,26 +264,26 @@ static PyObject *
 arpreq(PyObject *self, PyObject *arg)
 {
     struct arpreq_state *st = GETSTATE(self);
-    struct sockaddr_in ip_address;
-    struct sockaddr mac_address;
+    struct sockaddr_in ip;
+    struct sockaddr mac;
     int result;
 
-    memset(&ip_address, 0, sizeof(ip_address));
-    memset(&mac_address, 0, sizeof(mac_address));
-    ip_address.sin_family = AF_INET;
-    if (coerce_argument(self, arg, &(ip_address.sin_addr)) == -1) {
+    memset(&ip, 0, sizeof(ip));
+    memset(&mac, 0, sizeof(mac));
+    ip.sin_family = AF_INET;
+    if (coerce_argument(self, arg, &(ip.sin_addr)) == -1) {
         return NULL;
     }
 
     Py_BEGIN_ALLOW_THREADS
-    result = do_arpreq(st->socket, &ip_address, &mac_address);
+    result = do_arpreq(st->socket, &ip, &mac);
     Py_END_ALLOW_THREADS
 
     if (result < 0) {
         return PyErr_SetFromErrno(PyExc_OSError);
     }
     if (result > 0) {
-        return mac_to_string((unsigned char *)mac_address.sa_data);
+        return mac_to_string((unsigned char *)mac.sa_data);
     }
     Py_RETURN_NONE;
 }
@@ -310,26 +310,26 @@ static PyObject *
 arpreqb(PyObject *self, PyObject *arg)
 {
     struct arpreq_state *st = GETSTATE(self);
-    struct sockaddr_in ip_address;
-    struct sockaddr mac_address;
+    struct sockaddr_in ip;
+    struct mac mac;
     int result;
 
-    memset(&ip_address, 0, sizeof(ip_address));
-    memset(&mac_address, 0, sizeof(mac_address));
-    ip_address.sin_family = AF_INET;
-    if (coerce_argument(self, arg, &(ip_address.sin_addr)) == -1) {
+    memset(&ip, 0, sizeof(ip));
+    memset(&mac, 0, sizeof(mac));
+    ip.sin_family = AF_INET;
+    if (coerce_argument(self, arg, &(ip.sin_addr)) == -1) {
         return NULL;
     }
 
     Py_BEGIN_ALLOW_THREADS
-    result = do_arpreq(st->socket, &ip_address, &mac_address);
+    result = do_arpreq(st->socket, &ip, &mac);
     Py_END_ALLOW_THREADS
 
     if (result < 0) {
         return PyErr_SetFromErrno(PyExc_OSError);
     }
     if (result > 0) {
-        return mac_to_bytes((unsigned char *)mac_address.sa_data);
+        return mac_to_bytes((unsigned char *)mac.sa_data);
     }
     Py_RETURN_NONE;
 }

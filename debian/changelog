@@ -1,3 +1,9 @@
+arpreq (0.3.4-3) unstable; urgency=medium
+
+  * Bookworm
+
+ -- Julian Fölsch <julian.foelsch@agdsn.de>  Sat, 19 Sep 2026 01:32:00 +0200
+
 arpreq (0.3.4-2) unstable; urgency=medium
 
   * Disable Python 2 packaging
